@@ -3,7 +3,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python web_control.py",
+    "startCommand": "python web_control_final.py",
     "healthcheckPath": "/health"
   }
 }

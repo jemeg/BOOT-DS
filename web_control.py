@@ -31,7 +31,7 @@ LOGIN_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - لوحة تحكم البوت</title>
+    <title>تسجيل الدخول -𝐋𝐄𝐆𝐀𝐂𝐘  لوحة تحكم البوت</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -113,7 +113,7 @@ LOGIN_TEMPLATE = """
 </head>
 <body>
     <div class="login-container">
-        <h1>🤖 لوحة تحكم البوت</h1>
+        <h1>🤖𝐋𝐄𝐆𝐀𝐂𝐘  لوحة تحكم البوت</h1>
         
         {% with messages = get_flashed_messages() %}
             {% if messages %}
@@ -145,7 +145,7 @@ DASHBOARD_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم البوت</title>
+    <title>𝐋𝐄𝐆𝐀𝐂𝐘 لوحة تحكم البوت</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -354,7 +354,7 @@ DASHBOARD_TEMPLATE = """
 <body>
     <div class="header">
         <div class="header-content">
-            <h1>🤖 لوحة تحكم البوت</h1>
+            <h1>🤖𝐋𝐄𝐆𝐀𝐂𝐘  لوحة تحكم البوت</h1>
             <a href="/logout" class="logout-btn">تسجيل الخروج</a>
         </div>
     </div>
