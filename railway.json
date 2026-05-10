@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.railway.app/railway.json",
+  "build": {
+    "nixpacksPlan": {
+      "phases": {
+        "setup": {
+          "nixPkgs": ["libaudio"]
+        }
+      }
+    }
+  }
+}
