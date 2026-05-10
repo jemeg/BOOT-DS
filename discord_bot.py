@@ -3,7 +3,10 @@ from discord.ext import commands
 import asyncio
 import json
 import os
-from keep_alive import keep_alive
+import sys
+
+# تعطيل دعم الصوت لتجنب مشكلة audioop
+discord.VoiceClient.enabled = False
 
 # إعدادات البوت
 intents = discord.Intents.default()
@@ -99,5 +102,30 @@ async def تحديث_القوانين(ctx, *, new_rules: str = None):
         await ctx.send("❌ يرجى كتابة القوانين الجديدة بعد الأمر")
 
 # تشغيل البوت
-keep_alive()
-bot.run(os.getenv('DISCORD_TOKEN'))
+if __name__ == "__main__":
+    # تشغيل خادم Flask للحفاظ على البوت حياً
+    from flask import Flask
+    from threading import Thread
+    
+    app = Flask('')
+    
+    @app.route('/')
+    def home():
+        return "البوت يعمل!"
+    
+    def run():
+        app.run(host='0.0.0.0', port=8080)
+    
+    def keep_alive():
+        t = Thread(target=run)
+        t.start()
+    
+    keep_alive()
+    
+    # تشغيل البوت
+    TOKEN = os.getenv('DISCORD_TOKEN')
+    if not TOKEN:
+        print("خطأ: DISCORD_TOKEN غير موجود!")
+        sys.exit(1)
+    
+    bot.run(TOKEN)
