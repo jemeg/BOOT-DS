@@ -3,7 +3,7 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "python discord_bot_fixed.py",
+    "startCommand": "python web_control.py",
     "healthcheckPath": "/health"
   }
 }
