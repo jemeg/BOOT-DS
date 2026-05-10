@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>لعبة كلمات - نمط Codenames</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Sora:wght@300;400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#1f1f1f" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Codenames-style</p>
+          <h1 id="gameTitle">Qir5hoon</h1>
+          <p class="subtitle" data-i18n="subtitle">
+            فريقان، 25 كلمة، جاسوس واحد في كل فريق. هل ستصل لفريقك قبل القاتل؟
+          </p>
+        </div>
+        <div class="controls">
+          <button id="newGameBtn" class="btn primary" data-i18n="newGame">جولة جديدة</button>
+          <button id="restoreGameBtn" class="btn ghost" data-i18n="restore">استعادة الجولة</button>
+          <button id="clearSaveBtn" class="btn ghost" data-i18n="clearSave">مسح الحفظ</button>
+          <button id="langToggle" class="btn ghost" data-i18n="switchLang">EN</button>
+          <button id="spectatorBtn" class="btn ghost" data-i18n="spectator">وضع المشاهد</button>
+          <button id="highContrastBtn" class="btn ghost" data-i18n="highContrast">تباين عالي</button>
+          <button id="tutorialBtn" class="btn ghost" data-i18n="tutorial">دليل تعليمي</button>
+          <label class="toggle">
+            <input id="spymasterToggle" type="checkbox" />
+            <span data-i18n="spymasterMode">وضع رئيس الجواسيس</span>
+          </label>
+          <label class="toggle">
+            <input id="soundToggle" type="checkbox" checked />
+            <span data-i18n="sound">الصوت</span>
+          </label>
+        </div>
+      </header>
+
+      <main class="game">
+        <!-- إدارة اللاعبين -->
+        <section class="panel players-panel">
+          <h3 data-i18n="playersTitle">إدارة اللاعبين</h3>
+          <div class="field">
+            <label for="redSpymaster" data-i18n="redSpymaster">رئيس الجواسيس الأحمر</label>
+            <input id="redSpymaster" type="text" placeholder="الاسم" />
+          </div>
+          <div class="field">
+            <label for="blueSpymaster" data-i18n="blueSpymaster">رئيس الجواسيس الأزرق</label>
+            <input id="blueSpymaster" type="text" placeholder="الاسم" />
+          </div>
+          <div class="score-board">
+            <div class="score-item red">
+              <span class="score-label" data-i18n="score">النقاط</span>
+              <span id="redScore">0</span>
+            </div>
+            <div class="score-item blue">
+              <span class="score-label" data-i18n="score">النقاط</span>
+              <span id="blueScore">0</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="status-card">
+          <div class="team-card red">
+            <h3 data-i18n="teamRed">الفريق الأحمر</h3>
+            <p><span data-i18n="remaining">باقي</span>: <span id="redRemaining">9</span></p>
+            <p class="spymaster-name" id="redSpymasterDisplay">-</p>
+          </div>
+          <div class="center-status">
+            <p class="turn" data-i18n="currentTurn">الدور الحالي</p>
+            <h2 id="currentTurn">الأحمر</h2>
+            <p id="statusMessage" data-i18n="statusStart">اختر كلمة للفريق الحالي.</p>
+            <div class="timer-display" id="timerDisplay">03:00</div>
+            <div class="hint-display" id="hintDisplay"></div>
+            <div class="round-counter" data-i18n="round">الجولة <span id="roundNumber">1</span></div>
+          </div>
+          <div class="team-card blue">
+            <h3 data-i18n="teamBlue">الفريق الأزرق</h3>
+            <p><span data-i18n="remaining">باقي</span>: <span id="blueRemaining">8</span></p>
+            <p class="spymaster-name" id="blueSpymasterDisplay">-</p>
+          </div>
+        </section>
+
+        <section class="tool-grid">
+          <article class="panel">
+            <h3 data-i18n="hintTitle">إدخال الدليل</h3>
+            <div class="field">
+              <label for="clueInput" data-i18n="clueLabel">الدليل</label>
+              <input
+                id="clueInput"
+                type="text"
+                placeholder="حرارة"
+                data-i18n-placeholder="cluePlaceholder"
+              />
+            </div>
+            <div class="field">
+              <label for="countInput" data-i18n="countLabel">العدد</label>
+              <input id="countInput" type="number" min="1" max="9" value="2" />
+            </div>
+            <div class="panel-actions">
+              <button id="submitHintBtn" class="btn primary" data-i18n="submitHint">
+                تثبيت الدليل
+              </button>
+              <button id="endTurnBtn" class="btn ghost" data-i18n="endTurn">
+                إنهاء الدور
+              </button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3 data-i18n="timerTitle">المؤقت</h3>
+            <div class="field">
+              <label for="timerMinutes" data-i18n="timerLabel">الدقائق لكل دور</label>
+              <input id="timerMinutes" type="number" min="1" max="10" value="3" />
+            </div>
+            <div class="panel-actions">
+              <button id="timerToggleBtn" class="btn ghost" data-i18n="timerToggle">
+                تشغيل / إيقاف
+              </button>
+              <button id="resetTimerBtn" class="btn ghost" data-i18n="timerReset">
+                إعادة ضبط
+              </button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3 data-i18n="modeTitle">أوضاع اللعب</h3>
+            <div class="field">
+              <label for="modeSelect" data-i18n="modeLabel">اختر الوضع</label>
+              <select id="modeSelect"></select>
+            </div>
+            <p class="panel-note" id="modeDescription"></p>
+            <!-- أوضاع متقدمة -->
+            <div class="advanced-modes">
+              <label class="toggle">
+                <input id="duetMode" type="checkbox" />
+                <span data-i18n="duetMode">وضع الثنائي</span>
+              </label>
+              <label class="toggle">
+                <input id="speedrunMode" type="checkbox" />
+                <span data-i18n="speedrunMode">تحدي الوقت</span>
+              </label>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3 data-i18n="boardTitle">إعدادات اللوحة</h3>
+            <div class="field">
+              <label for="boardSizeSelect" data-i18n="boardSizeLabel">حجم اللوحة</label>
+              <select id="boardSizeSelect">
+                <option value="5">5 × 5</option>
+                <option value="4">4 × 4</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="redCountInput" data-i18n="redCountLabel">عدد الأحمر</label>
+              <input id="redCountInput" type="number" min="1" max="12" value="9" />
+            </div>
+            <div class="field">
+              <label for="blueCountInput" data-i18n="blueCountLabel">عدد الأزرق</label>
+              <input id="blueCountInput" type="number" min="1" max="12" value="8" />
+            </div>
+            <div class="field">
+              <label for="spymasterCode" data-i18n="spymasterCodeLabel">رمز رئيس الجواسيس</label>
+              <input id="spymasterCode" type="password" placeholder="1234" />
+            </div>
+            <p class="panel-note">
+              <span data-i18n="neutralLabel">المحايد</span>: <span id="neutralCount">7</span>
+            </p>
+          </article>
+
+          <article class="panel">
+            <h3 data-i18n="dictionaryTitle">قاموس الكلمات</h3>
+            <textarea
+              id="wordListInput"
+              rows="6"
+              placeholder="اكتب كلمات مفصولة بسطر أو فاصلة"
+              data-i18n-placeholder="wordPlaceholder"
+            ></textarea>
+            <div class="panel-actions">
+              <button id="applyWordsBtn" class="btn ghost" data-i18n="applyWords">
+                تطبيق القائمة
+              </button>
+              <button id="resetWordsBtn" class="btn ghost" data-i18n="resetWords">
+                إعادة الافتراضي
+              </button>
+            </div>
+          </article>
+
+          <!-- مشاركة اللعبة -->
+          <article class="panel">
+            <h3 data-i18n="shareTitle">مشاركة اللعبة</h3>
+            <div class="panel-actions">
+              <button id="shareUrlBtn" class="btn ghost" data-i18n="shareUrl">نسخ الرابط</button>
+              <button id="screenshotBtn" class="btn ghost" data-i18n="screenshot">لقطة شاشة</button>
+              <button id="exportLogBtn" class="btn ghost" data-i18n="exportLog">تصدير السجل</button>
+            </div>
+          </article>
+
+          <!-- إحصائيات -->
+          <article class="panel stats-panel">
+            <h3 data-i18n="statsTitle">إحصائيات اللعب</h3>
+            <div class="stats-grid">
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="gamesPlayed">الجولات</span>
+                <span id="gamesPlayed">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="redWins">فوز الأحمر</span>
+                <span id="redWins">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="blueWins">فوز الأزرق</span>
+                <span id="blueWins">0</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label" data-i18n="bestTime">أسرع فوز</span>
+                <span id="bestTime">-</span>
+              </div>
+            </div>
+            <h4 data-i18n="topClues">أكثر الأدلة استخداماً</h4>
+            <ul class="clue-list" id="topCluesList"></ul>
+            <div class="panel-actions">
+              <button id="resetStatsBtn" class="btn ghost" data-i18n="resetStats">إعادة تعيين</button>
+            </div>
+          </article>
+
+          <article class="panel">
+            <h3 data-i18n="logTitle">سجل الجولة</h3>
+            <ul class="log-list" id="logList"></ul>
+            <div class="panel-actions">
+              <button id="clearLogBtn" class="btn ghost" data-i18n="clearLog">
+                مسح السجل
+              </button>
+            </div>
+          </article>
+        </section>
+
+        <section class="board" id="board"></section>
+      </main>
+
+      <footer class="footer">
+        <p data-i18n="footerText">
+          لعبة محلية داخل المتصفح. يمكنك مشاركة الشاشة للعب جماعي، أو إضافة
+          قواعدك الخاصة.
+        </p>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+
+    <!-- عناصر إضافية -->
+    <!-- تأثيرات الاحتفال -->
+    <div id="confetti-container" class="confetti-container"></div>
+
+    <!-- نافذة التعليمي -->
+    <div id="tutorialModal" class="modal" role="dialog" aria-labelledby="tutorialTitle">
+      <div class="modal-content">
+        <button class="modal-close" id="closeTutorial" aria-label="إغلاق">&times;</button>
+        <h2 id="tutorialTitle" data-i18n="tutorialTitle">كيفية اللعب</h2>
+        <div class="tutorial-steps">
+          <div class="step">
+            <span class="step-number">1</span>
+            <p data-i18n="tutorialStep1">رئيس الجواسيس يعطي دليلاً (كلمة + رقم) يصف كلمات فريقه</p>
+          </div>
+          <div class="step">
+            <span class="step-number">2</span>
+            <p data-i18n="tutorialStep2">الفريق يحاول تخمين الكلمات الصحيحة بناءً على الدليل</p>
+          </div>
+          <div class="step">
+            <span class="step-number">3</span>
+            <p data-i18n="tutorialStep3">تجنب كشف كلمات الفريق الآخر أو القاتل (الأسود)</p>
+          </div>
+          <div class="step">
+            <span class="step-number">4</span>
+            <p data-i18n="tutorialStep4">أول فريق يكشف كل كلماته يفوز!</p>
+          </div>
+        </div>
+        <div class="keyboard-shortcuts">
+          <h3 data-i18n="keyboardShortcuts">اختصارات الكيبورد</h3>
+          <ul>
+            <li><kbd>Space</kbd> <span data-i18n="shortcutEndTurn">إنهاء الدور</span></li>
+            <li><kbd>Ctrl + Z</kbd> <span data-i18n="shortcutUndo">تراجع</span></li>
+            <li><kbd>Ctrl + Y</kbd> <span data-i18n="shortcutRedo">إعادة</span></li>
+            <li><kbd>N</kbd> <span data-i18n="shortcutNewGame">جولة جديدة</span></li>
+            <li><kbd>S</kbd> <span data-i18n="shortcutSpymaster">تبديل رئيس الجواسيس</span></li>
+            <li><kbd>T</kbd> <span data-i18n="shortcutTimer">تشغيل/إيقاف المؤقت</span></li>
+            <li><kbd>1-9</kbd> <span data-i18n="shortcutCards">اختيار بطاقة</span></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- تحذير الدليل -->
+    <div id="clueWarning" class="clue-warning" role="alert" aria-live="polite">
+      <span data-i18n="clueWarning">تحذير: الدليل موجود على اللوحة!</span>
+      <button id="dismissWarning" class="btn ghost" data-i18n="dismiss">تجاهل</button>
+    </div>
+
+    <!-- زر التراجع -->
+    <div class="undo-redo-bar">
+      <button id="undoBtn" class="btn ghost" data-i18n="undo" disabled>تراجع (Ctrl+Z)</button>
+      <button id="redoBtn" class="btn ghost" data-i18n="redo" disabled>إعادة (Ctrl+Y)</button>
+    </div>
+  </body>
+</html>
