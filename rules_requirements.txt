@@ -2,4 +2,3 @@ flask==2.3.3
 requests==2.31.0
 redis==5.0.1
 websocket-client==1.6.4
-secrets==1.0.0
