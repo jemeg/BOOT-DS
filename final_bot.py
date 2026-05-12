@@ -198,7 +198,7 @@ LOGIN_TEMPLATE = """
             </div>
             <button type="submit" class="btn">تسجيل الدخول</button>
         </form>
-        <div class="bot-info"><p>لوحة تحكم بوت ديسكورد بسيط</p></div>
+        <div class="bot-info"><p> 𝐋𝐄𝐆𝐀𝐂𝐘 👑 لوحة تحكم بوت</p></div>
     </div>
 </body>
 </html>
