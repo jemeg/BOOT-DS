@@ -52,11 +52,8 @@ class RulesWebSocket:
     def get_gateway_url(self):
         """الحصول على رابط WebSocket Gateway"""
         try:
-            response = discord_bot.test_connection()[1]
-            if response:
-                # استخدام رابط Gateway الافتراضي
-                return "wss://gateway.discord.gg/?v=10&encoding=json"
-            return None
+            # استخدام رابط Gateway الافتراضي
+            return "wss://gateway.discord.gg/?v=10&encoding=json"
         except Exception as e:
             logger.error(f"❌ خطأ في الحصول على رابط Gateway: {e}")
             return None
@@ -123,7 +120,7 @@ class RulesWebSocket:
             "op": 2,
             "d": {
                 "token": discord_bot.token,
-                "intents": 513,  # GUILDS + GUILD_VOICE_STATES
+                "intents": 513,  # GUILDS (1) + GUILD_VOICE_STATES (512)
                 "properties": {
                     "os": "linux",
                     "browser": "rules_bot",
