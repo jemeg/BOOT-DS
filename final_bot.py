@@ -73,9 +73,10 @@ class SimpleBot:
             logger.error(f"❌ استثناء في إرسال الرسالة: {e}")
             return False, str(e)
     
-    def send_rules_embed(self, channel_id, member_name=None):
+    def send_rules_embed(self, channel_id, member_name=None, custom_rules=None):
         """إرسال رسالة القوانين"""
-        rules_text = '\n'.join([f"**{i+1}.** {rule}" for i, rule in enumerate(DEFAULT_RULES)])
+        rules_to_use = custom_rules if custom_rules else DEFAULT_RULES
+        rules_text = '\n'.join([f"**{i+1}.** {rule}" for i, rule in enumerate(rules_to_use)])
         
         embed = {
             "title": "📜 قوانين السيرفر",
@@ -391,6 +392,11 @@ DASHBOARD_TEMPLATE = """
                     <textarea id="message" placeholder="اكتب رسالتك هنا..."></textarea>
                 </div>
                 
+                <div class="form-group">
+                    <label>قوانين مخصصة (اختياري):</label>
+                    <textarea id="customRules" placeholder="اكتب القوانين المخصصة هنا، كل قانون في سطر جديد..."></textarea>
+                </div>
+                
                 <button class="btn" onclick="sendMessage()">
                     <i class="fas fa-paper-plane"></i> إرسال رسالة
                 </button>
@@ -473,6 +479,7 @@ DASHBOARD_TEMPLATE = """
         function sendRules() {
             const channelId = document.getElementById('channelSelect').value;
             const memberName = document.getElementById('memberName').value;
+            const customRules = document.getElementById('customRules').value;
             
             if (!channelId) {
                 alert('يرجى اختيار القناة أولاً');
@@ -486,7 +493,8 @@ DASHBOARD_TEMPLATE = """
                 },
                 body: JSON.stringify({
                     channel_id: channelId,
-                    member_name: memberName
+                    member_name: memberName,
+                    custom_rules: customRules
                 })
             })
             .then(response => response.json())
@@ -595,11 +603,17 @@ def api_send_rules():
         data = request.get_json()
         channel_id = data.get('channel_id')
         member_name = data.get('member_name', '')
+        custom_rules = data.get('custom_rules')
         
         if not channel_id:
             return jsonify({'success': False, 'error': 'لم يتم تحديد القناة'})
         
-        success, result = bot.send_rules_embed(channel_id, member_name)
+        # معالجة القوانين المخصصة
+        custom_rules_list = None
+        if custom_rules and custom_rules.strip():
+            custom_rules_list = [rule.strip() for rule in custom_rules.split('\n') if rule.strip()]
+        
+        success, result = bot.send_rules_embed(channel_id, member_name, custom_rules_list)
         
         if success:
             return jsonify({'success': True, 'message_id': result.get('id')})
