@@ -743,7 +743,7 @@ if __name__ == "__main__":
     connected, bot_info = discord_bot.test_connection()
     if connected:
         logger.info("✅ بوت القوانين البسيط متصل وجاهز للعمل")
-        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)), debug=False)
+        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 3000)), debug=False)
     else:
         logger.error("❌ فشل الاتصال بالبوت")
-        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)), debug=False)
+        app.run(host='0.0.0.0', port=int(os.getenv('PORT', 3000)), debug=False)

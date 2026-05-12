@@ -6,7 +6,6 @@ from flask import Flask, jsonify, request, render_template_string, redirect, url
 import logging
 import hashlib
 import secrets
-from datetime import datetime, timedelta
 
 # إعداد الـ logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -14,16 +13,11 @@ logger = logging.getLogger(__name__)
 
 # إعدادات البوت
 BOT_TOKEN = os.getenv('DISCORD_TOKEN')
-APPLICATION_ID = os.getenv('APPLICATION_ID')
-GUILD_ID = os.getenv('GUILD_ID')
 ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin123')
 
 # إعدادات Flask
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET', secrets.token_hex(32))
-
-# ملف تخزين القوانين
-RULES_FILE = 'rules_data.json'
 
 # القوانين الافتراضية
 DEFAULT_RULES = [
@@ -35,47 +29,7 @@ DEFAULT_RULES = [
     "🎮 الالتزام بقوانين اللعب"
 ]
 
-class SimpleRulesManager:
-    def __init__(self):
-        self.rules_file = RULES_FILE
-        self.data = self.load_data()
-        
-    def load_data(self):
-        """تحميل بيانات القوانين"""
-        try:
-            if os.path.exists(self.rules_file):
-                with open(self.rules_file, 'r', encoding='utf-8') as f:
-                    return json.load(f)
-            else:
-                return {'rules': DEFAULT_RULES}
-        except Exception as e:
-            logger.error(f"Error loading rules data: {e}")
-            return {'rules': DEFAULT_RULES}
-    
-    def save_data(self):
-        """حفظ بيانات القوانين"""
-        try:
-            with open(self.rules_file, 'w', encoding='utf-8') as f:
-                json.dump(self.data, f, ensure_ascii=False, indent=2)
-            return True
-        except Exception as e:
-            logger.error(f"Error saving rules data: {e}")
-            return False
-    
-    def get_rules_embed(self, member_name=None):
-        """إنشاء رسالة القوانين"""
-        rules_text = '\n'.join([f"**{i+1}.** {rule}" for i, rule in enumerate(self.data['rules'])])
-        
-        embed = {
-            "title": "📜 قوانين السيرفر",
-            "description": f"مرحباً بك في السيرفر! يرجى قراءة القوانين أدناه:\n\n{rules_text}",
-            "color": 0x667eea,
-            "footer": {"text": f"مرحباً {member_name or 'بك'}!"}
-        }
-        
-        return embed
-
-class SimpleDiscordBot:
+class SimpleBot:
     def __init__(self):
         self.token = BOT_TOKEN
         self.base_url = "https://discord.com/api/v10"
@@ -84,7 +38,6 @@ class SimpleDiscordBot:
             "Content-Type": "application/json",
             "User-Agent": "DiscordBot (Render, 1.0)"
         }
-        self.rules_manager = SimpleRulesManager()
         
     def test_connection(self):
         """اختبار الاتصال بـ Discord API"""
@@ -102,9 +55,35 @@ class SimpleDiscordBot:
             logger.error(f"❌ استثناء في الاتصال: {e}")
             return False, None
     
-    def send_rules_message(self, channel_id, member_name):
+    def send_message(self, channel_id, content):
+        """إرسال رسالة بسيطة"""
+        url = f"{self.base_url}/channels/{channel_id}/messages"
+        data = {"content": content}
+        
+        try:
+            response = requests.post(url, headers=self.headers, json=data, timeout=10)
+            if response.status_code == 200:
+                result = response.json()
+                logger.info(f"✅ تم إرسال الرسالة بنجاح")
+                return True, result
+            else:
+                logger.error(f"❌ خطأ في إرسال الرسالة: {response.status_code}")
+                return False, response.text
+        except Exception as e:
+            logger.error(f"❌ استثناء في إرسال الرسالة: {e}")
+            return False, str(e)
+    
+    def send_rules_embed(self, channel_id, member_name=None):
         """إرسال رسالة القوانين"""
-        embed = self.rules_manager.get_rules_embed(member_name)
+        rules_text = '\n'.join([f"**{i+1}.** {rule}" for i, rule in enumerate(DEFAULT_RULES)])
+        
+        embed = {
+            "title": "📜 قوانين السيرفر",
+            "description": f"مرحباً بك في السيرفر! يرجى قراءة القوانين أدناه:\n\n{rules_text}",
+            "color": 0x667eea,
+            "footer": {"text": f"مرحباً {member_name or 'بك'}!"}
+        }
+        
         url = f"{self.base_url}/channels/{channel_id}/messages"
         data = {"embeds": [embed]}
         
@@ -154,8 +133,7 @@ class SimpleDiscordBot:
             return []
 
 # إنشاء كائن البوت
-simple_bot = SimpleDiscordBot()
-rules_manager = simple_bot.rules_manager
+bot = SimpleBot()
 
 # HTML Templates
 LOGIN_TEMPLATE = """
@@ -164,7 +142,7 @@ LOGIN_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - لوحة تحكم القوانين</title>
+    <title>تسجيل الدخول - لوحة تحكم البوت</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -204,7 +182,7 @@ LOGIN_TEMPLATE = """
 </head>
 <body>
     <div class="login-container">
-        <h1>📜 لوحة تحكم القوانين</h1>
+        <h1>🤖 لوحة تحكم البوت</h1>
         {% with messages = get_flashed_messages() %}
             {% if messages %}
                 {% for message in messages %}
@@ -219,19 +197,19 @@ LOGIN_TEMPLATE = """
             </div>
             <button type="submit" class="btn">تسجيل الدخول</button>
         </form>
-        <div class="bot-info"><p>لوحة تحكم بوت القوانين البسيط</p></div>
+        <div class="bot-info"><p>لوحة تحكم بوت ديسكورد بسيط</p></div>
     </div>
 </body>
 </html>
 """
 
-SIMPLE_DASHBOARD = """
+DASHBOARD_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم القوانين</title>
+    <title>لوحة تحكم البوت</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -311,59 +289,6 @@ SIMPLE_DASHBOARD = """
             transition: transform 0.2s;
         }
         .btn:hover { transform: translateY(-2px); }
-        .btn-danger {
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-        }
-        .rules-list {
-            display: grid;
-            gap: 15px;
-        }
-        .rule-item {
-            background: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        .rule-number {
-            width: 40px;
-            height: 40px;
-            background: #667eea;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-        }
-        .rule-text {
-            flex: 1;
-            font-size: 16px;
-        }
-        .rule-actions {
-            display: flex;
-            gap: 10px;
-        }
-        .icon-btn {
-            width: 35px;
-            height: 35px;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-        .icon-btn.delete {
-            background: #e74c3c;
-            color: white;
-        }
-        .icon-btn:hover {
-            transform: scale(1.1);
-        }
         .alert {
             padding: 12px;
             border-radius: 8px;
@@ -404,7 +329,7 @@ SIMPLE_DASHBOARD = """
 <body>
     <div class="header">
         <div class="header-content">
-            <h1>📜 لوحة تحكم القوانين</h1>
+            <h1>🤖 لوحة تحكم البوت</h1>
             <a href="/logout" class="logout-btn">تسجيل الخروج</a>
         </div>
     </div>
@@ -435,23 +360,25 @@ SIMPLE_DASHBOARD = """
         
         <div class="card">
             <div class="card-header">
-                <i class="fas fa-gavel"></i>
-                إدارة القوانين
+                <i class="fas fa-paper-plane"></i>
+                إرسال رسالة
             </div>
             <div class="card-body">
                 <div class="form-group">
-                    <label>إرسال رسالة القوانين:</label>
-                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 10px;">
-                        <select id="serverSelect" onchange="loadChannels()">
-                            <option value="">اختر السيرفر...</option>
-                            {% for server in servers %}
-                            <option value="{{ server.id }}">{{ server.name }}</option>
-                            {% endfor %}
-                        </select>
-                        <select id="channelSelect" disabled>
-                            <option value="">اختر القناة...</option>
-                        </select>
-                    </div>
+                    <label>اختر السيرفر:</label>
+                    <select id="serverSelect" onchange="loadChannels()">
+                        <option value="">اختر السيرفر...</option>
+                        {% for server in servers %}
+                        <option value="{{ server.id }}">{{ server.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>اختر القناة:</label>
+                    <select id="channelSelect" disabled>
+                        <option value="">اختر القناة...</option>
+                    </select>
                 </div>
                 
                 <div class="form-group">
@@ -459,34 +386,18 @@ SIMPLE_DASHBOARD = """
                     <input type="text" id="memberName" placeholder="اكتب اسم المستخدم...">
                 </div>
                 
-                <button class="btn" onclick="sendRules()">
-                    <i class="fas fa-paper-plane"></i> إرسال القوانين
+                <div class="form-group">
+                    <label>الرسالة:</label>
+                    <textarea id="message" placeholder="اكتب رسالتك هنا..."></textarea>
+                </div>
+                
+                <button class="btn" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i> إرسال رسالة
                 </button>
                 
-                <div style="margin-top: 30px;">
-                    <h3 style="margin-bottom: 15px;">القوانين الحالية:</h3>
-                    <div class="rules-list" id="rulesList">
-                        {% for rule in rules %}
-                        <div class="rule-item">
-                            <div class="rule-number">{{ loop.index }}</div>
-                            <div class="rule-text">{{ rule }}</div>
-                            <button class="icon-btn delete" onclick="deleteRule({{ loop.index0 }})">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>إضافة قانون جديد:</label>
-                    <div style="display: flex; gap: 10px;">
-                        <input type="text" id="newRule" placeholder="اكتب القانون الجديد..." style="flex: 1;">
-                        <button class="btn" onclick="addRule()">
-                            <i class="fas fa-plus"></i> إضافة
-                        </button>
-                    </div>
-                </div>
+                <button class="btn" onclick="sendRules()" style="margin-top: 10px;">
+                    <i class="fas fa-gavel"></i> إرسال القوانين
+                </button>
             </div>
         </div>
     </div>
@@ -520,6 +431,45 @@ SIMPLE_DASHBOARD = """
                 });
         }
         
+        function sendMessage() {
+            const channelId = document.getElementById('channelSelect').value;
+            const message = document.getElementById('message').value;
+            
+            if (!channelId) {
+                alert('يرجى اختيار القناة أولاً');
+                return;
+            }
+            
+            if (!message) {
+                alert('يرجى كتابة الرسالة');
+                return;
+            }
+            
+            fetch('/api/send-message', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    channel_id: channelId,
+                    message: message
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('تم إرسال الرسالة بنجاح!');
+                    document.getElementById('message').value = '';
+                } else {
+                    alert('خطأ: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('حدث خطأ أثناء إرسال الرسالة');
+            });
+        }
+        
         function sendRules() {
             const channelId = document.getElementById('channelSelect').value;
             const memberName = document.getElementById('memberName').value;
@@ -551,66 +501,6 @@ SIMPLE_DASHBOARD = """
                 console.error('Error:', error);
                 alert('حدث خطأ أثناء إرسال القوانين');
             });
-        }
-        
-        function addRule() {
-            const ruleText = document.getElementById('newRule').value.trim();
-            
-            if (!ruleText) {
-                alert('يرجى كتابة القانون');
-                return;
-            }
-            
-            fetch('/api/rules', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: 'add',
-                    rule: ruleText
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('newRule').value = '';
-                    location.reload();
-                } else {
-                    alert('خطأ: ' + data.error);
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('حدث خطأ أثناء إضافة القانون');
-            });
-        }
-        
-        function deleteRule(index) {
-            if (confirm('هل أنت متأكد من حذف هذا القانون؟')) {
-                fetch('/api/rules', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: 'delete',
-                        index: index
-                    })
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('خطأ: ' + data.error);
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('حدث خطأ أثناء حذف القانون');
-                });
-            }
         }
     </script>
 </body>
@@ -649,32 +539,52 @@ def dashboard():
         return redirect(url_for('login'))
     
     # الحصول على السيرفرات
-    guilds = simple_bot.get_user_guilds()
+    guilds = bot.get_user_guilds()
     
     # حساب الإحصائيات
     total_servers = len(guilds)
     total_channels = 0
     for guild in guilds:
-        channels = simple_bot.get_guild_channels(guild['id'])
+        channels = bot.get_guild_channels(guild['id'])
         total_channels += len(channels)
     
     stats = {
         'total_servers': total_servers,
         'total_channels': total_channels,
-        'rules_count': len(rules_manager.data['rules'])
+        'rules_count': len(DEFAULT_RULES)
     }
     
-    return render_template_string(SIMPLE_DASHBOARD, 
-                              servers=guilds, 
-                              stats=stats, 
-                              rules=rules_manager.data['rules'])
+    return render_template_string(DASHBOARD_TEMPLATE, servers=guilds, stats=stats)
 
 @app.route('/api/servers/<server_id>/channels')
 def api_server_channels(server_id):
     if 'logged_in' not in session:
         return jsonify({'error': 'غير مصرح'}), 401
-    channels = simple_bot.get_guild_channels(server_id)
+    channels = bot.get_guild_channels(server_id)
     return jsonify(channels)
+
+@app.route('/api/send-message', methods=['POST'])
+def api_send_message():
+    if 'logged_in' not in session:
+        return jsonify({'error': 'غير مصرح'}), 401
+    
+    try:
+        data = request.get_json()
+        channel_id = data.get('channel_id')
+        message = data.get('message')
+        
+        if not channel_id or not message:
+            return jsonify({'success': False, 'error': 'البيانات غير مكتملة'})
+        
+        success, result = bot.send_message(channel_id, message)
+        
+        if success:
+            return jsonify({'success': True, 'message_id': result.get('id')})
+        else:
+            return jsonify({'success': False, 'error': str(result)})
+    except Exception as e:
+        logger.error(f"Error in send_message API: {e}")
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/api/send-rules', methods=['POST'])
 def api_send_rules():
@@ -689,7 +599,7 @@ def api_send_rules():
         if not channel_id:
             return jsonify({'success': False, 'error': 'لم يتم تحديد القناة'})
         
-        success, result = simple_bot.send_rules_message(channel_id, member_name)
+        success, result = bot.send_rules_embed(channel_id, member_name)
         
         if success:
             return jsonify({'success': True, 'message_id': result.get('id')})
@@ -699,38 +609,6 @@ def api_send_rules():
         logger.error(f"Error in send_rules API: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/api/rules', methods=['GET', 'POST'])
-def api_rules():
-    if 'logged_in' not in session:
-        return jsonify({'error': 'غير مصرح'}), 401
-    
-    if request.method == 'GET':
-        return jsonify({'rules': rules_manager.data['rules']})
-    
-    if request.method == 'POST':
-        data = request.get_json()
-        action = data.get('action')
-        
-        if action == 'add':
-            rule_text = data.get('rule', '').strip()
-            if rule_text:
-                rules_manager.data['rules'].append(rule_text)
-                if rules_manager.save_data():
-                    return jsonify({'success': True})
-                else:
-                    return jsonify({'success': False, 'error': 'فشل في حفظ القانون'})
-        
-        elif action == 'delete':
-            index = data.get('index')
-            if 0 <= index < len(rules_manager.data['rules']):
-                del rules_manager.data['rules'][index]
-                if rules_manager.save_data():
-                    return jsonify({'success': True})
-                else:
-                    return jsonify({'success': False, 'error': 'فشل في حذف القانون'})
-        
-        return jsonify({'success': False, 'error': 'إجراء غير صالح'})
-
 @app.route('/health')
 def health():
     return jsonify({"status": "healthy", "timestamp": time.time()})
@@ -739,18 +617,16 @@ def health():
 def test():
     return jsonify({
         "token_exists": bool(BOT_TOKEN),
-        "app_id_exists": bool(APPLICATION_ID),
-        "guild_id_exists": bool(GUILD_ID),
         "token_length": len(BOT_TOKEN) if BOT_TOKEN else 0,
-        "bot_connected": simple_bot.test_connection()[0],
-        "rules_count": len(rules_manager.data['rules'])
+        "bot_connected": bot.test_connection()[0],
+        "rules_count": len(DEFAULT_RULES)
     })
 
 if __name__ == "__main__":
     # اختبار الاتصال
-    connected, bot_info = simple_bot.test_connection()
+    connected, bot_info = bot.test_connection()
     if connected:
-        logger.info("✅ بوت القوانين البسيط متصل وجاهز للعمل")
+        logger.info("✅ البوت متصل وجاهز للعمل")
         app.run(host='0.0.0.0', port=int(os.getenv('PORT', 3000)), debug=False)
     else:
         logger.error("❌ فشل الاتصال بالبوت")
