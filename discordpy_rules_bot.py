@@ -106,9 +106,17 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 
 class RulesView(discord.ui.View):
     """عرض القوانين التفاعلية"""
-    def __init__(self, rules):
+    def __init__(self):
         super().__init__(timeout=None)
-        self.rules = rules
+        self.update_buttons()
+    
+    def update_buttons(self):
+        """تحديث الأزرار بناءً على القوانين الحالية"""
+        # إزالة جميع الأزرار القديمة
+        self.clear_items()
+        
+        # تحميل القوانين الحالية
+        rules = load_rules()
         
         # إضافة أزرار لكل فئة
         for category in rules.keys():
@@ -152,8 +160,7 @@ async def on_voice_state_update(member, before, after):
     """معالجة دخول/خروج القنوات الصوتية"""
     if after.channel and not before.channel:
         # المستخدم دخل قناة صوتية
-        rules = load_rules()
-        view = RulesView(rules)
+        view = RulesView()
         
         embed = discord.Embed(
             title="📜 اختر فئة القوانين",
@@ -948,8 +955,7 @@ def api_send_interactive_rules():
         if not channel:
             return jsonify({'success': False, 'error': 'القناة غير موجودة'})
         
-        rules = load_rules()
-        view = RulesView(rules)
+        view = RulesView()
         
         embed = discord.Embed(
             title="📜 اختر فئة القوانين",
