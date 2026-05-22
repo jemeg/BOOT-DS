@@ -16,7 +16,7 @@ function initializeBot() {
   });
 
   const token = process.env.BOT_TOKEN;
-  if (!token || token === 'YOUR_BOT_TOKEN_HERE') {
+  if (!token || token === 'MTUwNzQ1ODc4OTU2NDIxOTQ1Mg.GjUTZh.fG088OirA1nUVUoKVjxm_moeJ-k3ckadO7epDM') {
     console.warn('⚠️ لم يتم تعيين توكن البوت. البوت لن يعمل.');
     return null;
   }
