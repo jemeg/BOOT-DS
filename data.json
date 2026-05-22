@@ -1,0 +1,137 @@
+{
+  "applications": [
+    {
+      "id": "mphdq9qazp79vn",
+      "full_name": "DFG",
+      "age": 22,
+      "reason": "GHJ",
+      "discord_user_id": "767470330025214052",
+      "discord_username": "ghazwan.mg",
+      "status": "rejected",
+      "rejection_reason": "ASD",
+      "reviewed_by": "ghazwan.mg",
+      "reviewed_at": "2026-05-22T23:36:18.432Z",
+      "created_at": "2026-05-22T23:35:54.178Z",
+      "reviewed_by_id": "767470330025214052"
+    },
+    {
+      "id": "mphfdo6zr52mk8",
+      "type": "ambulance",
+      "full_name": "محمد",
+      "age": 25,
+      "reason": "مسعف",
+      "discord_user_id": "767470330025214052",
+      "discord_username": "ghazwan.mg",
+      "status": "rejected",
+      "rejection_reason": "غير مئهل",
+      "reviewed_by": "ghazwan.mg",
+      "reviewed_at": "2026-05-23T00:22:24.590Z",
+      "created_at": "2026-05-23T00:22:05.627Z",
+      "reviewed_by_id": "767470330025214052"
+    },
+    {
+      "id": "mphfhmy1p7xoih",
+      "type": "ambulance",
+      "full_name": "محمد",
+      "age": 25,
+      "reason": "مسعف",
+      "discord_user_id": "767470330025214052",
+      "discord_username": "ghazwan.mg",
+      "status": "rejected",
+      "rejection_reason": "غير مؤهل",
+      "reviewed_by": "ghazwan.mg",
+      "reviewed_at": "2026-05-23T00:25:24.664Z",
+      "created_at": "2026-05-23T00:25:10.633Z",
+      "reviewed_by_id": "767470330025214052"
+    },
+    {
+      "id": "mphfk1tu7jhjx5",
+      "type": "ambulance",
+      "full_name": "ااا",
+      "age": 22,
+      "reason": "شسي",
+      "discord_user_id": "767470330025214052",
+      "discord_username": "ghazwan.mg",
+      "status": "rejected",
+      "rejection_reason": "شسي",
+      "reviewed_by": "ghazwan.mg",
+      "reviewed_at": "2026-05-23T00:27:11.734Z",
+      "created_at": "2026-05-23T00:27:03.234Z",
+      "reviewed_by_id": "767470330025214052"
+    }
+  ],
+  "logs": [
+    {
+      "id": "mphdq9qmvobq9n",
+      "application_id": "mphdq9qazp79vn",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب جديد بواسطة DFG",
+      "created_at": "2026-05-22T23:35:54.190Z"
+    },
+    {
+      "id": "mphdqsgdty1j5t",
+      "application_id": "mphdq9qazp79vn",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب DFG بواسطة ghazwan.mg بسبب: ASD",
+      "created_at": "2026-05-22T23:36:18.445Z"
+    },
+    {
+      "id": "mphfdo7bo68jft",
+      "application_id": "mphfdo6zr52mk8",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب إسعاف جديد بواسطة محمد",
+      "created_at": "2026-05-23T00:22:05.639Z"
+    },
+    {
+      "id": "mphfe2u359xjag",
+      "application_id": "mphfdo6zr52mk8",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب محمد بواسطة ghazwan.mg بسبب: غير مئهل",
+      "created_at": "2026-05-23T00:22:24.603Z"
+    },
+    {
+      "id": "mphfhmyepemaxz",
+      "application_id": "mphfhmy1p7xoih",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب إسعاف جديد بواسطة محمد",
+      "created_at": "2026-05-23T00:25:10.646Z"
+    },
+    {
+      "id": "mphfhxs5j8e8t0",
+      "application_id": "mphfhmy1p7xoih",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب محمد بواسطة ghazwan.mg بسبب: غير مؤهل",
+      "created_at": "2026-05-23T00:25:24.677Z"
+    },
+    {
+      "id": "mphfk1u6slssnp",
+      "application_id": "mphfk1tu7jhjx5",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب إسعاف جديد بواسطة ااا",
+      "created_at": "2026-05-23T00:27:03.246Z"
+    },
+    {
+      "id": "mphfk8ecr92jia",
+      "application_id": "mphfk1tu7jhjx5",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب ااا بواسطة ghazwan.mg بسبب: شسي",
+      "created_at": "2026-05-23T00:27:11.748Z"
+    }
+  ]
+}
