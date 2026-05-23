@@ -589,8 +589,13 @@ async function handleButtonInteraction(interaction) {
           .setFooter({ text: 'وزارة الصحة' })
           .setTimestamp();
         await targetMember.send({ embeds: [notifyEmbed] }).catch(() => {});
+
+        const approvedRoleId = process.env.APPROVED_ROLE_ID;
+        if (approvedRoleId && approvedRoleId !== 'YOUR_APPROVED_ROLE_ID_HERE') {
+          await targetMember.roles.add(approvedRoleId).catch(() => {});
+        }
       } catch (err) {
-        console.error('خطأ في إرسال إشعار:', err);
+        console.error('خطأ في إرسال إشعار أو إعطاء رتبة:', err);
       }
     }
 
