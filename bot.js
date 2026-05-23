@@ -59,10 +59,7 @@ async function registerCommands() {
   const commands = [
     new SlashCommandBuilder()
       .setName('تقديم')
-      .setDescription('📋 تقديم طلب جديد للتسجيل في وزارة الصحة'),
-    new SlashCommandBuilder()
-      .setName('اسعاف')
-      .setDescription('🚑 تقديم طلب للانضمام إلى الإسعاف'),
+      .setDescription('📋 عرض نموذج التقديم'),
     new SlashCommandBuilder()
       .setName('حالتي')
       .setDescription('🔍 عرض حالة طلب التقديم الخاص بك'),
@@ -93,8 +90,7 @@ async function handleCommand(interaction) {
       .setDescription('الأوامر المتاحة في بوت وزارة الصحة')
       .addFields(
         { name: '📋 الزر في الروم', value: 'اضغط على زر **تقديم طلب** في روم النموذج', inline: false },
-        { name: '/تقديم', value: '📋 تقديم طلب عام', inline: false },
-        { name: '/اسعاف', value: '🚑 تقديم طلب للانضمام للإسعاف', inline: false },
+        { name: '/تقديم', value: '📋 عرض نموذج التقديم في الروم الحالي', inline: false },
         { name: '/حالتي', value: '🔍 عرض حالة طلب التقديم الخاص بك', inline: false },
         { name: '/نشر', value: '📋 نشر نموذج التقديم في الروم (للمسؤولين)', inline: false },
         { name: '/مساعدة', value: '📚 عرض هذه القائمة', inline: false },
@@ -131,107 +127,41 @@ async function handleCommand(interaction) {
     return interaction.reply({ embeds: [embed], ephemeral: true });
 
   } else if (interaction.commandName === 'تقديم') {
+    await interaction.deferReply({ ephemeral: true });
+
     const settings = db.settings.get();
-    if (!settings.submissions_open) {
-      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
-    }
+    const embed = new EmbedBuilder()
+      .setColor(0xd4af37)
+      .setTitle('📋 نموذج التقديم - وزارة الصحة')
+      .setDescription(
+        (settings.submissions_open
+          ? 'اضغط على الزر أدناه لتقديم طلب جديد.'
+          : 'التقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲') +
+        '\n\n**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
+        '**• يجب أن يكون عمرك فوق 15 سنة ✅**\n' +
+        '**• يمكنك تقديم طلب واحد فقط كل مرة 📄**\n' +
+        '**• بعد المراجعة سيتم إعلامك بنتيجة طلبك 📬**'
+      )
+      .setImage(FORM_IMAGE)
+      .setFooter({ text: 'وزارة الصحة' })
+      .setTimestamp();
 
-    const member = interaction.member;
-    const activatedRoleId = process.env.ACTIVATED_ROLE_ID;
+    const btnAmbulance = settings.submissions_open
+      ? new ButtonBuilder()
+          .setCustomId('open_ambulance_form')
+          .setLabel('🚑 تقديم على الإسعاف')
+          .setStyle(ButtonStyle.Danger)
+      : new ButtonBuilder()
+          .setCustomId('submissions_closed')
+          .setLabel('🔒 التقديم مغلق')
+          .setStyle(ButtonStyle.Secondary);
 
-    if (activatedRoleId && activatedRoleId !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
-      if (!member.roles.cache.has(activatedRoleId)) {
-        return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', ephemeral: true });
-      }
-    }
+    await interaction.channel.send({
+      embeds: [embed],
+      components: [new ActionRowBuilder().addComponents(btnAmbulance)]
+    });
 
-    const userApps = db.applications.getByUser(interaction.user.id);
-    const pendingApp = userApps.find(a => a.status === 'pending');
-    if (pendingApp) {
-      return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل. انتظر حتى تتم معالجته.', ephemeral: true });
-    }
-
-    const modal = new ModalBuilder()
-      .setCustomId('application_form')
-      .setTitle('📋 نموذج التقديم');
-
-    const fullName = new TextInputBuilder()
-      .setCustomId('full_name')
-      .setLabel('اسمك')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder('أدخل اسمك الكامل')
-      .setMaxLength(100)
-      .setRequired(true);
-
-    const age = new TextInputBuilder()
-      .setCustomId('age')
-      .setLabel('عمرك')
-      .setStyle(TextInputStyle.Short)
-      .setPlaceholder('مثال: 25')
-      .setMaxLength(3)
-      .setRequired(true);
-
-    const reason = new TextInputBuilder()
-      .setCustomId('reason')
-      .setLabel('سبب التقديم')
-      .setStyle(TextInputStyle.Paragraph)
-      .setPlaceholder('اكتب سبب تقديمك هنا...')
-      .setMaxLength(1000)
-      .setRequired(true);
-
-    const firstRow = new ActionRowBuilder().addComponents(fullName);
-    const secondRow = new ActionRowBuilder().addComponents(age);
-    const thirdRow = new ActionRowBuilder().addComponents(reason);
-    modal.addComponents(firstRow, secondRow, thirdRow);
-
-    await interaction.showModal(modal);
-
-  } else if (interaction.commandName === 'اسعاف') {
-    const settings = db.settings.get();
-    if (!settings.submissions_open) {
-      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
-    }
-
-    const member = interaction.member;
-    const activatedRoleId = process.env.ACTIVATED_ROLE_ID;
-
-    if (activatedRoleId && activatedRoleId !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
-      if (!member.roles.cache.has(activatedRoleId)) {
-        return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', ephemeral: true });
-      }
-    }
-
-    const userApps = db.applications.getByUser(interaction.user.id);
-    if (userApps.some(a => a.status === 'pending')) {
-      return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', ephemeral: true });
-    }
-
-    const modal = new ModalBuilder()
-      .setCustomId('ambulance_form')
-      .setTitle('🚑 نموذج التقديم - الإسعاف');
-
-    const fullName = new TextInputBuilder()
-      .setCustomId('full_name').setLabel('اسمك')
-      .setStyle(TextInputStyle.Short).setPlaceholder('أدخل اسمك الكامل')
-      .setMaxLength(100).setRequired(true);
-
-    const age = new TextInputBuilder()
-      .setCustomId('age').setLabel('عمرك')
-      .setStyle(TextInputStyle.Short).setPlaceholder('مثال: 25')
-      .setMaxLength(3).setRequired(true);
-
-    const reason = new TextInputBuilder()
-      .setCustomId('reason').setLabel('سبب التقديم')
-      .setStyle(TextInputStyle.Paragraph).setPlaceholder('اكتب سبب تقديمك هنا...')
-      .setMaxLength(1000).setRequired(true);
-
-    modal.addComponents(
-      new ActionRowBuilder().addComponents(fullName),
-      new ActionRowBuilder().addComponents(age),
-      new ActionRowBuilder().addComponents(reason)
-    );
-
-    await interaction.showModal(modal);
+    await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
 
   } else if (interaction.commandName === 'نشر') {
     const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
