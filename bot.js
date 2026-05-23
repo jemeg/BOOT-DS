@@ -39,11 +39,11 @@ function initializeBot() {
       }
     } catch (err) {
       console.error('خطأ:', err);
-      const msg = '❌ حدث خطأ أثناء معالجة الطلب';
+      const msg = { content: '❌ حدث خطأ أثناء معالجة الطلب', flags: MessageFlags.Ephemeral };
       if (interaction.deferred || interaction.replied) {
-        await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral });
+        await interaction.followUp(msg).catch(() => {});
       } else {
-        await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
+        await interaction.reply(msg).catch(() => {});
       }
     }
   });
