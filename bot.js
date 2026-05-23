@@ -150,11 +150,11 @@ async function handleCommand(interaction) {
       ? new ButtonBuilder()
           .setCustomId('open_ambulance_form')
           .setLabel('🚑 تقديم على الإسعاف')
-          .setStyle(ButtonStyle.Danger)
+          .setStyle(ButtonStyle.Success)
       : new ButtonBuilder()
           .setCustomId('submissions_closed')
           .setLabel('🔒 التقديم مغلق')
-          .setStyle(ButtonStyle.Secondary);
+          .setStyle(ButtonStyle.Danger);
 
     await interaction.channel.send({
       embeds: [embed],
@@ -194,11 +194,11 @@ async function handleCommand(interaction) {
       ? new ButtonBuilder()
           .setCustomId('open_ambulance_form')
           .setLabel('🚑 تقديم على الإسعاف')
-          .setStyle(ButtonStyle.Danger)
+          .setStyle(ButtonStyle.Success)
       : new ButtonBuilder()
           .setCustomId('submissions_closed')
           .setLabel('🔒 التقديم مغلق')
-          .setStyle(ButtonStyle.Secondary);
+          .setStyle(ButtonStyle.Danger);
 
     await interaction.channel.send({
       embeds: [embed],
@@ -419,11 +419,11 @@ async function sendPersistentForm() {
     ? new ButtonBuilder()
         .setCustomId('open_ambulance_form')
         .setLabel('🚑 تقديم على الإسعاف')
-        .setStyle(ButtonStyle.Danger)
+        .setStyle(ButtonStyle.Success)
     : new ButtonBuilder()
         .setCustomId('submissions_closed')
         .setLabel('🔒 التقديم مغلق')
-        .setStyle(ButtonStyle.Secondary);
+        .setStyle(ButtonStyle.Danger);
 
   await channel.send({
     embeds: [embed],
@@ -443,14 +443,11 @@ async function sendControlPanel() {
   if (old) await old.delete().catch(() => {});
 
   const settings = db.settings.get();
+  const CONTROL_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507566493863510036/6a06818e-cbbb-4e21-ae2d-b881781ea41b.png?ex=6a125e35&is=6a110cb5&hm=719cc88e347a8e6bf573afd3876804338a43a70296b75fe3d0449326aa17ba4f';
   const embed = new EmbedBuilder()
     .setColor(0xd4af37)
     .setTitle('⚙️ لوحة التحكم - فتح وغلاق التقديم')
-    .setDescription(
-      '**الحالة الحالية:** ' + (settings.submissions_open ? '✅ **مفتوح**' : '🔒 **مغلق**') +
-      '\n\nاضغط على الزر أدناه لتغيير حالة التقديم.\n\n' +
-      '> 🛡️ هذا الإجراء مخصص **للمسؤولين** فقط'
-    )
+    .setImage(CONTROL_IMAGE)
     .setFooter({ text: 'وزارة الصحة' })
     .setTimestamp();
 
@@ -558,7 +555,13 @@ async function handleButtonInteraction(interaction) {
   }
 
   if (customId === 'submissions_closed') {
-    return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
+    const CLOSED_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507564528445948035/e55c93c4-1db1-443a-86af-ee6a0311e721.png?ex=6a125c60&is=6a110ae0&hm=fc995b702e1a0a33499232b6807f728044f7a782aab95ee370320e621c67164c';
+    const embed = new EmbedBuilder()
+      .setColor(0xd4af37)
+      .setImage(CLOSED_IMAGE)
+      .setFooter({ text: 'وزارة الصحة' })
+      .setTimestamp();
+    return interaction.reply({ embeds: [embed], ephemeral: true });
   }
 
   if (customId === 'toggle_submissions') {

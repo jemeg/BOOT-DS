@@ -58,6 +58,21 @@
       "reviewed_at": "2026-05-23T00:27:11.734Z",
       "created_at": "2026-05-23T00:27:03.234Z",
       "reviewed_by_id": "767470330025214052"
+    },
+    {
+      "id": "mphp9xqdoyud2m",
+      "type": "ambulance",
+      "full_name": "شسي",
+      "age": 12,
+      "reason": "شسي",
+      "discord_user_id": "767470330025214052",
+      "discord_username": "ghazwan.mg",
+      "status": "rejected",
+      "rejection_reason": "بلا",
+      "reviewed_by": "ghazwan.mg",
+      "reviewed_at": "2026-05-23T04:59:12.862Z",
+      "created_at": "2026-05-23T04:59:07.538Z",
+      "reviewed_by_id": "767470330025214052"
     }
   ],
   "logs": [
@@ -132,6 +147,27 @@
       "performed_by_id": "767470330025214052",
       "details": "تم رفض طلب ااا بواسطة ghazwan.mg بسبب: شسي",
       "created_at": "2026-05-23T00:27:11.748Z"
+    },
+    {
+      "id": "mphp9xr7bg6mtm",
+      "application_id": "mphp9xqdoyud2m",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب إسعاف جديد بواسطة شسي",
+      "created_at": "2026-05-23T04:59:07.555Z"
+    },
+    {
+      "id": "mphpa1uy9dt33y",
+      "application_id": "mphp9xqdoyud2m",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب شسي بواسطة ghazwan.mg بسبب: بلا",
+      "created_at": "2026-05-23T04:59:12.874Z"
     }
-  ]
+  ],
+  "settings": {
+    "submissions_open": false
+  }
 }
