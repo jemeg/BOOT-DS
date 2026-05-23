@@ -274,6 +274,8 @@ async function handleModalSubmit(interaction) {
     if (!app) return interaction.reply({ content: '❌ لم يتم العثور على الطلب.', flags: MessageFlags.Ephemeral });
     if (app.status !== 'pending') return interaction.reply({ content: '❌ تم معالجة هذا الطلب بالفعل.', flags: MessageFlags.Ephemeral });
 
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     const channel = guild?.channels.cache.get(process.env.REQUESTS_CHANNEL_ID);
 
@@ -342,11 +344,11 @@ async function handleModalSubmit(interaction) {
             { name: 'السبب', value: reason }
           )
           .setFooter({ text: `تم الرفض في ${new Date().toLocaleString('ar-EG')}` });
-        await msg.edit({ embeds: [embed], components: [] });
+        await msg.edit({ embeds: [embed], components: [] }).catch(err => console.error('فشل تعديل رسالة الرفض:', err));
       }
     }
 
-    await interaction.reply({ content: '❌ تم رفض الطلب.', flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ content: '❌ تم رفض الطلب.' });
   }
 }
 
@@ -605,7 +607,7 @@ async function handleButtonInteraction(interaction) {
       .addFields({ name: 'تمت الموافقة بواسطة', value: interaction.user.tag })
       .setFooter({ text: `تم القبول في ${new Date().toLocaleString('ar-EG')}` });
 
-    await interaction.message.edit({ embeds: [embed], components: [] });
+    await interaction.message.edit({ embeds: [embed], components: [] }).catch(err => console.error('فشل تعديل رسالة القبول:', err));
     await interaction.editReply({ content: '✅ تم قبول الطلب بنجاح!' });
 
   } else if (customId.startsWith('reject_')) {
