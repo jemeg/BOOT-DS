@@ -10,13 +10,13 @@ function generateId() {
 function readData() {
   try {
     if (!fs.existsSync(DATA_FILE)) {
-      const initial = { applications: [], logs: [] };
+      const initial = { applications: [], logs: [], settings: { submissions_open: true } };
       fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2));
       return initial;
     }
     return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
   } catch {
-    return { applications: [], logs: [] };
+    return { applications: [], logs: [], settings: { submissions_open: true } };
   }
 }
 

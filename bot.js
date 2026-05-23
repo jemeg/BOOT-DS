@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, SlashCommandBuilder, REST, Routes } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, SlashCommandBuilder, REST, Routes, MessageFlags } = require('discord.js');
 const db = require('./db');
 
 const FORM_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563829/1507484501562101883/f9f2318f-7bb3-49bc-9f0b-42b4834bf827.png';
@@ -41,9 +41,9 @@ function initializeBot() {
       console.error('خطأ:', err);
       const msg = '❌ حدث خطأ أثناء معالجة الطلب';
       if (interaction.deferred || interaction.replied) {
-        await interaction.followUp({ content: msg, ephemeral: true });
+        await interaction.followUp({ content: msg, flags: MessageFlags.Ephemeral });
       } else {
-        await interaction.reply({ content: msg, ephemeral: true });
+        await interaction.reply({ content: msg, flags: MessageFlags.Ephemeral });
       }
     }
   });
@@ -97,12 +97,12 @@ async function handleCommand(interaction) {
       )
       .setFooter({ text: 'وزارة الصحة' })
       .setTimestamp();
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
   } else if (interaction.commandName === 'حالتي') {
     const userApps = db.applications.getByUser(interaction.user.id);
     if (!userApps.length) {
-      return interaction.reply({ content: '❌ ليس لديك أي طلبات تقديم.', ephemeral: true });
+      return interaction.reply({ content: '❌ ليس لديك أي طلبات تقديم.', flags: MessageFlags.Ephemeral });
     }
 
     const latest = userApps[userApps.length - 1];
@@ -124,10 +124,10 @@ async function handleCommand(interaction) {
       embed.addFields({ name: 'سبب الرفض', value: latest.rejection_reason, inline: false });
     }
 
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
   } else if (interaction.commandName === 'تقديم') {
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const settings = db.settings.get();
     const embed = new EmbedBuilder()
@@ -167,11 +167,11 @@ async function handleCommand(interaction) {
     const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
     if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE') {
       if (!interaction.member.roles.cache.has(ADMIN_ROLE_ID)) {
-        return interaction.reply({ content: '❌ هذا الأمر مخصص للمسؤولين فقط.', ephemeral: true });
+        return interaction.reply({ content: '❌ هذا الأمر مخصص للمسؤولين فقط.', flags: MessageFlags.Ephemeral });
       }
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const settings = db.settings.get();
     const embed = new EmbedBuilder()
@@ -216,10 +216,10 @@ async function handleModalSubmit(interaction) {
     const reason = interaction.fields.getTextInputValue('reason');
 
     if (isNaN(age) || parseInt(age) < 1 || parseInt(age) > 150) {
-      return interaction.reply({ content: '❌ العمر يجب أن يكون رقماً صحيحاً بين 1 و 150', ephemeral: true });
+      return interaction.reply({ content: '❌ العمر يجب أن يكون رقماً صحيحاً بين 1 و 150', flags: MessageFlags.Ephemeral });
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const app = db.applications.create({
       full_name, age: parseInt(age), reason,
@@ -244,10 +244,10 @@ async function handleModalSubmit(interaction) {
     const reason = interaction.fields.getTextInputValue('reason');
 
     if (isNaN(age) || parseInt(age) < 1 || parseInt(age) > 150) {
-      return interaction.reply({ content: '❌ العمر يجب أن يكون رقماً صحيحاً بين 1 و 150', ephemeral: true });
+      return interaction.reply({ content: '❌ العمر يجب أن يكون رقماً صحيحاً بين 1 و 150', flags: MessageFlags.Ephemeral });
     }
 
-    await interaction.deferReply({ ephemeral: true });
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const app = db.applications.create({
       type: 'ambulance', full_name, age: parseInt(age), reason,
@@ -271,8 +271,8 @@ async function handleModalSubmit(interaction) {
     const reason = interaction.fields.getTextInputValue('rejection_reason');
 
     const app = db.applications.getById(appId);
-    if (!app) return interaction.reply({ content: '❌ لم يتم العثور على الطلب.', ephemeral: true });
-    if (app.status !== 'pending') return interaction.reply({ content: '❌ تم معالجة هذا الطلب بالفعل.', ephemeral: true });
+    if (!app) return interaction.reply({ content: '❌ لم يتم العثور على الطلب.', flags: MessageFlags.Ephemeral });
+    if (app.status !== 'pending') return interaction.reply({ content: '❌ تم معالجة هذا الطلب بالفعل.', flags: MessageFlags.Ephemeral });
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     const channel = guild?.channels.cache.get(process.env.REQUESTS_CHANNEL_ID);
@@ -346,7 +346,7 @@ async function handleModalSubmit(interaction) {
       }
     }
 
-    await interaction.reply({ content: '❌ تم رفض الطلب.', ephemeral: true });
+    await interaction.reply({ content: '❌ تم رفض الطلب.', flags: MessageFlags.Ephemeral });
   }
 }
 
@@ -467,18 +467,18 @@ async function handleButtonInteraction(interaction) {
   if (customId === 'open_form') {
     const settings = db.settings.get();
     if (!settings.submissions_open) {
-      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
+      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', flags: MessageFlags.Ephemeral });
     }
 
     if (ACTIVATED_ROLE_ID && ACTIVATED_ROLE_ID !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
       if (!member.roles.cache.has(ACTIVATED_ROLE_ID)) {
-        return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', ephemeral: true });
+        return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', flags: MessageFlags.Ephemeral });
       }
     }
 
     const userApps = db.applications.getByUser(interaction.user.id);
     if (userApps.some(a => a.status === 'pending')) {
-      return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', ephemeral: true });
+      return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', flags: MessageFlags.Ephemeral });
     }
 
     const modal = new ModalBuilder()
@@ -512,18 +512,18 @@ async function handleButtonInteraction(interaction) {
   if (customId === 'open_ambulance_form') {
     const settings = db.settings.get();
     if (!settings.submissions_open) {
-      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
+      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', flags: MessageFlags.Ephemeral });
     }
 
     if (ACTIVATED_ROLE_ID && ACTIVATED_ROLE_ID !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
       if (!member.roles.cache.has(ACTIVATED_ROLE_ID)) {
-        return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', ephemeral: true });
+        return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', flags: MessageFlags.Ephemeral });
       }
     }
 
     const userApps = db.applications.getByUser(interaction.user.id);
     if (userApps.some(a => a.status === 'pending')) {
-      return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', ephemeral: true });
+      return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', flags: MessageFlags.Ephemeral });
     }
 
     const modal = new ModalBuilder()
@@ -561,31 +561,31 @@ async function handleButtonInteraction(interaction) {
       .setImage(CLOSED_IMAGE)
       .setFooter({ text: 'وزارة الصحة' })
       .setTimestamp();
-    return interaction.reply({ embeds: [embed], ephemeral: true });
+    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
   }
 
   if (customId === 'toggle_submissions') {
     if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE' && !member.roles.cache.has(ADMIN_ROLE_ID)) {
-      return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', ephemeral: true });
+      return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
     }
     const settings = db.settings.get();
     const newValue = !settings.submissions_open;
     db.settings.update('submissions_open', newValue);
     await sendControlPanel();
     await sendPersistentForm();
-    await interaction.reply({ content: newValue ? '✅ تم فتح التقديم!' : '🔒 تم إغلاق التقديم!', ephemeral: true });
+    await interaction.reply({ content: newValue ? '✅ تم فتح التقديم!' : '🔒 تم إغلاق التقديم!', flags: MessageFlags.Ephemeral });
     return;
   }
 
   if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE' && !member.roles.cache.has(ADMIN_ROLE_ID)) {
-    return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', ephemeral: true });
+    return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
   }
 
   if (customId.startsWith('approve_')) {
     const appId = customId.replace('approve_', '');
     const app = db.applications.getById(appId);
-    if (!app) return interaction.reply({ content: '❌ لم يتم العثور على الطلب.', ephemeral: true });
-    if (app.status !== 'pending') return interaction.reply({ content: '❌ تم معالجة هذا الطلب بالفعل.', ephemeral: true });
+    if (!app) return interaction.reply({ content: '❌ لم يتم العثور على الطلب.', flags: MessageFlags.Ephemeral });
+    if (app.status !== 'pending') return interaction.reply({ content: '❌ تم معالجة هذا الطلب بالفعل.', flags: MessageFlags.Ephemeral });
 
     db.applications.update(appId, {
       status: 'approved',
@@ -643,7 +643,7 @@ async function handleButtonInteraction(interaction) {
       .setFooter({ text: `تم القبول في ${new Date().toLocaleString('ar-EG')}` });
 
     await interaction.message.edit({ embeds: [embed], components: [] });
-    await interaction.reply({ content: '✅ تم قبول الطلب بنجاح!', ephemeral: true });
+    await interaction.reply({ content: '✅ تم قبول الطلب بنجاح!', flags: MessageFlags.Ephemeral });
 
   } else if (customId.startsWith('reject_')) {
     const appId = customId.replace('reject_', '');
