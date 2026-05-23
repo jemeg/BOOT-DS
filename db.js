@@ -84,6 +84,19 @@ const db = {
       };
     }
   },
+  settings: {
+    get() {
+      const data = readData();
+      return data.settings || { submissions_open: true };
+    },
+    update(key, value) {
+      const data = readData();
+      if (!data.settings) data.settings = { submissions_open: true };
+      data.settings[key] = value;
+      writeData(data);
+      return data.settings;
+    }
+  },
   logs: {
     create(entry) {
       const data = readData();

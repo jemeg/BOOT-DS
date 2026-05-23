@@ -25,6 +25,7 @@ function initializeBot() {
     console.log(`✅ البوت متصل كـ ${client.user.tag}`);
     await registerCommands();
     await sendPersistentForm();
+    await sendControlPanel();
   });
 
   client.on('interactionCreate', async (interaction) => {
@@ -130,6 +131,11 @@ async function handleCommand(interaction) {
     return interaction.reply({ embeds: [embed], ephemeral: true });
 
   } else if (interaction.commandName === 'تقديم') {
+    const settings = db.settings.get();
+    if (!settings.submissions_open) {
+      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
+    }
+
     const member = interaction.member;
     const activatedRoleId = process.env.ACTIVATED_ROLE_ID;
 
@@ -181,6 +187,11 @@ async function handleCommand(interaction) {
     await interaction.showModal(modal);
 
   } else if (interaction.commandName === 'اسعاف') {
+    const settings = db.settings.get();
+    if (!settings.submissions_open) {
+      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
+    }
+
     const member = interaction.member;
     const activatedRoleId = process.env.ACTIVATED_ROLE_ID;
 
@@ -232,6 +243,8 @@ async function handleCommand(interaction) {
 
     await interaction.deferReply({ ephemeral: true });
 
+    const settings = db.settings.get();
+
     const embed = new EmbedBuilder()
       .setColor(0xd4af37)
       .setTitle('📋 نموذج التقديم - وزارة الصحة')
@@ -246,10 +259,15 @@ async function handleCommand(interaction) {
       .setFooter({ text: 'وزارة الصحة' })
       .setTimestamp();
 
-    const btnAmbulance = new ButtonBuilder()
-      .setCustomId('open_ambulance_form')
-      .setLabel('🚑 تقديم على الإسعاف')
-      .setStyle(ButtonStyle.Danger);
+    const btnAmbulance = settings.submissions_open
+      ? new ButtonBuilder()
+          .setCustomId('open_ambulance_form')
+          .setLabel('🚑 تقديم على الإسعاف')
+          .setStyle(ButtonStyle.Danger)
+      : new ButtonBuilder()
+          .setCustomId('submissions_closed')
+          .setLabel('🔒 التقديم مغلق')
+          .setStyle(ButtonStyle.Secondary);
 
     await interaction.channel.send({
       embeds: [embed],
@@ -449,12 +467,16 @@ async function sendPersistentForm() {
   const old = messages.find(m => m.author.id === client.user.id && m.components.length > 0);
   if (old) await old.delete().catch(() => {});
 
+  const settings = db.settings.get();
+
   const embed = new EmbedBuilder()
     .setColor(0xd4af37)
     .setTitle('📋 نموذج التقديم - وزارة الصحة')
     .setDescription(
-      'اضغط على الزر أدناه لتقديم طلب جديد.\n\n' +
-      '**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
+      (settings.submissions_open
+        ? 'اضغط على الزر أدناه لتقديم طلب جديد.'
+        : 'التقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲') +
+      '\n\n**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
       '**• يجب أن يكون عمرك فوق 15 سنة ✅**\n' +
       '**• يمكنك تقديم طلب واحد فقط كل مرة 📄**\n' +
       '**• بعد المراجعة سيتم إعلامك بنتيجة طلبك 📬**'
@@ -463,15 +485,52 @@ async function sendPersistentForm() {
     .setFooter({ text: 'وزارة الصحة' })
     .setTimestamp();
 
-  const btnAmbulance = new ButtonBuilder()
-    .setCustomId('open_ambulance_form')
-    .setLabel('🚑 تقديم على الإسعاف')
-    .setStyle(ButtonStyle.Danger);
+  const btnAmbulance = settings.submissions_open
+    ? new ButtonBuilder()
+        .setCustomId('open_ambulance_form')
+        .setLabel('🚑 تقديم على الإسعاف')
+        .setStyle(ButtonStyle.Danger)
+    : new ButtonBuilder()
+        .setCustomId('submissions_closed')
+        .setLabel('🔒 التقديم مغلق')
+        .setStyle(ButtonStyle.Secondary);
 
   await channel.send({
     embeds: [embed],
     components: [new ActionRowBuilder().addComponents(btnAmbulance)]
   });
+}
+
+async function sendControlPanel() {
+  if (!client || !client.isReady()) return;
+  const channelId = process.env.CONTROL_CHANNEL_ID;
+  if (!channelId || channelId === 'YOUR_CONTROL_CHANNEL_ID_HERE') return;
+  const channel = client.channels.cache.get(channelId);
+  if (!channel) return;
+
+  const messages = await channel.messages.fetch({ limit: 20 });
+  const old = messages.find(m => m.author.id === client.user.id && m.components.length > 0);
+  if (old) await old.delete().catch(() => {});
+
+  const settings = db.settings.get();
+
+  const embed = new EmbedBuilder()
+    .setColor(0xd4af37)
+    .setTitle('⚙️ لوحة التحكم - فتح وغلاق التقديم')
+    .setDescription(
+      '**الحالة الحالية:** ' + (settings.submissions_open ? '✅ **مفتوح**' : '🔒 **مغلق**') +
+      '\n\nاضغط على الزر أدناه لتغيير حالة التقديم.'
+    )
+    .setFooter({ text: 'وزارة الصحة' })
+    .setTimestamp();
+
+  const toggleBtn = new ButtonBuilder()
+    .setCustomId('toggle_submissions')
+    .setLabel(settings.submissions_open ? '🔒 إغلاق التقديم' : '✅ فتح التقديم')
+    .setStyle(settings.submissions_open ? ButtonStyle.Danger : ButtonStyle.Success);
+
+  const row = new ActionRowBuilder().addComponents(toggleBtn);
+  await channel.send({ embeds: [embed], components: [row] });
 }
 
 async function handleButtonInteraction(interaction) {
@@ -480,6 +539,11 @@ async function handleButtonInteraction(interaction) {
   const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
 
   if (customId === 'open_form') {
+    const settings = db.settings.get();
+    if (!settings.submissions_open) {
+      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
+    }
+
     if (ACTIVATED_ROLE_ID && ACTIVATED_ROLE_ID !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
       if (!member.roles.cache.has(ACTIVATED_ROLE_ID)) {
         return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', ephemeral: true });
@@ -520,6 +584,11 @@ async function handleButtonInteraction(interaction) {
   }
 
   if (customId === 'open_ambulance_form') {
+    const settings = db.settings.get();
+    if (!settings.submissions_open) {
+      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
+    }
+
     if (ACTIVATED_ROLE_ID && ACTIVATED_ROLE_ID !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
       if (!member.roles.cache.has(ACTIVATED_ROLE_ID)) {
         return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', ephemeral: true });
@@ -557,6 +626,23 @@ async function handleButtonInteraction(interaction) {
     );
 
     return interaction.showModal(modal);
+  }
+
+  if (customId === 'submissions_closed') {
+    return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', ephemeral: true });
+  }
+
+  if (customId === 'toggle_submissions') {
+    if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
+      return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', ephemeral: true });
+    }
+    const settings = db.settings.get();
+    const newValue = !settings.submissions_open;
+    db.settings.update('submissions_open', newValue);
+    await sendControlPanel();
+    await sendPersistentForm();
+    await interaction.reply({ content: newValue ? '✅ تم فتح التقديم!' : '🔒 تم إغلاق التقديم!', ephemeral: true });
+    return;
   }
 
   if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
@@ -649,4 +735,8 @@ async function handleButtonInteraction(interaction) {
   }
 }
 
-module.exports = { initializeBot };
+async function refreshForm() {
+  await sendPersistentForm();
+}
+
+module.exports = { initializeBot, refreshForm };

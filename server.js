@@ -81,6 +81,19 @@ app.get('/api/stats', (req, res) => {
   res.json(db.applications.getStats());
 });
 
+app.get('/api/settings', (req, res) => {
+  res.json(db.settings.get());
+});
+
+app.post('/api/settings/toggle-submissions', (req, res) => {
+  const settings = db.settings.get();
+  const newValue = !settings.submissions_open;
+  db.settings.update('submissions_open', newValue);
+  const bot = require('./bot');
+  if (bot.refreshForm) bot.refreshForm();
+  res.json({ submissions_open: newValue, message: newValue ? '✅ تم فتح التقديم' : '🔒 تم إغلاق التقديم' });
+});
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
