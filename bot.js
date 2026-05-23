@@ -5,6 +5,10 @@ const FORM_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563829/1
 
 let client = null;
 
+function getClient() {
+  return client;
+}
+
 function initializeBot() {
   client = new Client({
     intents: [
@@ -400,7 +404,6 @@ async function sendPersistentForm() {
 
   const messages = await channel.messages.fetch({ limit: 20 });
   const old = messages.find(m => m.author.id === client.user.id && m.components.length > 0);
-  if (old) await old.delete().catch(() => {});
 
   const settings = await db.settings.get();
   const embed = new EmbedBuilder()
@@ -429,10 +432,17 @@ async function sendPersistentForm() {
         .setLabel('🔒 التقديم مغلق')
         .setStyle(ButtonStyle.Danger);
 
-  await channel.send({
-    embeds: [embed],
-    components: [new ActionRowBuilder().addComponents(btn)]
-  });
+  if (old) {
+    await old.edit({
+      embeds: [embed],
+      components: [new ActionRowBuilder().addComponents(btn)]
+    }).catch(() => {});
+  } else {
+    await channel.send({
+      embeds: [embed],
+      components: [new ActionRowBuilder().addComponents(btn)]
+    });
+  }
 }
 
 async function sendControlPanel() {
@@ -444,7 +454,6 @@ async function sendControlPanel() {
 
   const messages = await channel.messages.fetch({ limit: 20 });
   const old = messages.find(m => m.author.id === client.user.id && m.components.length > 0);
-  if (old) await old.delete().catch(() => {});
 
   const settings = await db.settings.get();
   const CONTROL_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507566493863510036/6a06818e-cbbb-4e21-ae2d-b881781ea41b.png?ex=6a125e35&is=6a110cb5&hm=719cc88e347a8e6bf573afd3876804338a43a70296b75fe3d0449326aa17ba4f';
@@ -460,7 +469,11 @@ async function sendControlPanel() {
     .setLabel(settings.submissions_open ? '🔒 إغلاق التقديم' : '✅ فتح التقديم')
     .setStyle(settings.submissions_open ? ButtonStyle.Danger : ButtonStyle.Success);
 
-  await channel.send({ embeds: [embed], components: [new ActionRowBuilder().addComponents(toggleBtn)] });
+  if (old) {
+    await old.edit({ embeds: [embed], components: [new ActionRowBuilder().addComponents(toggleBtn)] }).catch(() => {});
+  } else {
+    await channel.send({ embeds: [embed], components: [new ActionRowBuilder().addComponents(toggleBtn)] });
+  }
 }
 
 async function handleButtonInteraction(interaction) {
@@ -527,13 +540,24 @@ async function handleButtonInteraction(interaction) {
     if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE' && !member.roles.cache.has(ADMIN_ROLE_ID)) {
       return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
     }
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    
     const settings = await db.settings.get();
     const newValue = !settings.submissions_open;
     await db.settings.update('submissions_open', newValue);
-    await sendControlPanel();
+
+    const toggleBtn = new ButtonBuilder()
+      .setCustomId('toggle_submissions')
+      .setLabel(newValue ? '🔒 إغلاق التقديم' : '✅ فتح التقديم')
+      .setStyle(newValue ? ButtonStyle.Danger : ButtonStyle.Success);
+
+    try {
+      await interaction.message.edit({ components: [new ActionRowBuilder().addComponents(toggleBtn)] });
+    } catch (err) {
+      console.error('فشل تحديث الزر:', err);
+    }
+    
     await sendPersistentForm();
-    await interaction.editReply({ content: newValue ? '✅ تم فتح التقديم!' : '🔒 تم إغلاق التقديم!' });
+    
     return;
   }
 
@@ -638,4 +662,4 @@ async function refreshForm() {
   await sendPersistentForm();
 }
 
-module.exports = { initializeBot, refreshForm };
+module.exports = { initializeBot, refreshForm, getClient };

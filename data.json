@@ -296,6 +296,6 @@
     }
   ],
   "settings": {
-    "submissions_open": true
+    "submissions_open": false
   }
 }
