@@ -565,7 +565,7 @@ async function handleButtonInteraction(interaction) {
   }
 
   if (customId === 'toggle_submissions') {
-    if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
+    if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE' && !member.roles.cache.has(ADMIN_ROLE_ID)) {
       return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', ephemeral: true });
     }
     const settings = db.settings.get();
@@ -577,7 +577,7 @@ async function handleButtonInteraction(interaction) {
     return;
   }
 
-  if (!member.roles.cache.has(ADMIN_ROLE_ID)) {
+  if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE' && !member.roles.cache.has(ADMIN_ROLE_ID)) {
     return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', ephemeral: true });
   }
 
