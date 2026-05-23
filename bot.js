@@ -100,7 +100,7 @@ async function handleCommand(interaction) {
     return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
   } else if (interaction.commandName === 'حالتي') {
-    const userApps = db.applications.getByUser(interaction.user.id);
+    const userApps = await db.applications.getByUser(interaction.user.id);
     if (!userApps.length) {
       return interaction.reply({ content: '❌ ليس لديك أي طلبات تقديم.', flags: MessageFlags.Ephemeral });
     }
@@ -129,7 +129,7 @@ async function handleCommand(interaction) {
   } else if (interaction.commandName === 'تقديم') {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const settings = db.settings.get();
+    const settings = await db.settings.get();
     const embed = new EmbedBuilder()
       .setColor(0xd4af37)
       .setTitle('📋 نموذج التقديم - وزارة الصحة')
@@ -173,7 +173,7 @@ async function handleCommand(interaction) {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const settings = db.settings.get();
+    const settings = await db.settings.get();
     const embed = new EmbedBuilder()
       .setColor(0xd4af37)
       .setTitle('📋 نموذج التقديم - وزارة الصحة')
@@ -221,13 +221,13 @@ async function handleModalSubmit(interaction) {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const app = db.applications.create({
+    const app = await db.applications.create({
       full_name, age: parseInt(age), reason,
       discord_user_id: interaction.user.id,
       discord_username: interaction.user.username
     });
 
-    db.logs.create({
+    await db.logs.create({
       application_id: app.id, action: 'submit',
       performed_by: interaction.user.username,
       performed_by_id: interaction.user.id,
@@ -249,13 +249,13 @@ async function handleModalSubmit(interaction) {
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    const app = db.applications.create({
+    const app = await db.applications.create({
       type: 'ambulance', full_name, age: parseInt(age), reason,
       discord_user_id: interaction.user.id,
       discord_username: interaction.user.username
     });
 
-    db.logs.create({
+    await db.logs.create({
       application_id: app.id, action: 'submit',
       performed_by: interaction.user.username,
       performed_by_id: interaction.user.id,
@@ -270,7 +270,7 @@ async function handleModalSubmit(interaction) {
     const appId = interaction.customId.replace('reject_reason_', '');
     const reason = interaction.fields.getTextInputValue('rejection_reason');
 
-    const app = db.applications.getById(appId);
+    const app = await db.applications.getById(appId);
     if (!app) return interaction.reply({ content: '❌ لم يتم العثور على الطلب.', flags: MessageFlags.Ephemeral });
     if (app.status !== 'pending') return interaction.reply({ content: '❌ تم معالجة هذا الطلب بالفعل.', flags: MessageFlags.Ephemeral });
 
@@ -279,7 +279,7 @@ async function handleModalSubmit(interaction) {
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
     const channel = guild?.channels.cache.get(process.env.REQUESTS_CHANNEL_ID);
 
-    db.applications.update(appId, {
+    await db.applications.update(appId, {
       status: 'rejected',
       rejection_reason: reason,
       reviewed_by: interaction.user.tag,
@@ -287,7 +287,7 @@ async function handleModalSubmit(interaction) {
       reviewed_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()
     });
 
-    db.logs.create({
+    await db.logs.create({
       application_id: appId, action: 'reject',
       performed_by: interaction.user.tag,
       performed_by_id: interaction.user.id,
@@ -400,7 +400,7 @@ async function sendPersistentForm() {
   const old = messages.find(m => m.author.id === client.user.id && m.components.length > 0);
   if (old) await old.delete().catch(() => {});
 
-  const settings = db.settings.get();
+  const settings = await db.settings.get();
   const embed = new EmbedBuilder()
     .setColor(0xd4af37)
     .setTitle('📋 نموذج التقديم - وزارة الصحة')
@@ -444,7 +444,7 @@ async function sendControlPanel() {
   const old = messages.find(m => m.author.id === client.user.id && m.components.length > 0);
   if (old) await old.delete().catch(() => {});
 
-  const settings = db.settings.get();
+  const settings = await db.settings.get();
   const CONTROL_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507566493863510036/6a06818e-cbbb-4e21-ae2d-b881781ea41b.png?ex=6a125e35&is=6a110cb5&hm=719cc88e347a8e6bf573afd3876804338a43a70296b75fe3d0449326aa17ba4f';
   const embed = new EmbedBuilder()
     .setColor(0xd4af37)
@@ -467,7 +467,7 @@ async function handleButtonInteraction(interaction) {
   const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
 
   if (customId === 'open_form') {
-    const settings = db.settings.get();
+    const settings = await db.settings.get();
     if (!settings.submissions_open) {
       return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', flags: MessageFlags.Ephemeral });
     }
@@ -478,7 +478,7 @@ async function handleButtonInteraction(interaction) {
       }
     }
 
-    const userApps = db.applications.getByUser(interaction.user.id);
+    const userApps = await db.applications.getByUser(interaction.user.id);
     if (userApps.some(a => a.status === 'pending')) {
       return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', flags: MessageFlags.Ephemeral });
     }
@@ -526,9 +526,9 @@ async function handleButtonInteraction(interaction) {
       return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
     }
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-    const settings = db.settings.get();
+    const settings = await db.settings.get();
     const newValue = !settings.submissions_open;
-    db.settings.update('submissions_open', newValue);
+    await db.settings.update('submissions_open', newValue);
     await sendControlPanel();
     await sendPersistentForm();
     await interaction.editReply({ content: newValue ? '✅ تم فتح التقديم!' : '🔒 تم إغلاق التقديم!' });
@@ -541,20 +541,20 @@ async function handleButtonInteraction(interaction) {
 
   if (customId.startsWith('approve_')) {
     const appId = customId.replace('approve_', '');
-    const app = db.applications.getById(appId);
+    const app = await db.applications.getById(appId);
     if (!app) return interaction.reply({ content: '❌ لم يتم العثور على الطلب.', flags: MessageFlags.Ephemeral });
     if (app.status !== 'pending') return interaction.reply({ content: '❌ تم معالجة هذا الطلب بالفعل.', flags: MessageFlags.Ephemeral });
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
-    db.applications.update(appId, {
+    await db.applications.update(appId, {
       status: 'approved',
       reviewed_by: interaction.user.tag,
       reviewed_by_id: interaction.user.id,
       reviewed_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()
     });
 
-    db.logs.create({
+    await db.logs.create({
       application_id: appId, action: 'approve',
       performed_by: interaction.user.tag,
       performed_by_id: interaction.user.id,
