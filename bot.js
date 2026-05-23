@@ -146,7 +146,7 @@ async function handleCommand(interaction) {
       .setFooter({ text: 'وزارة الصحة' })
       .setTimestamp();
 
-    const btnAmbulance = settings.submissions_open
+    const btn = settings.submissions_open
       ? new ButtonBuilder()
           .setCustomId('open_ambulance_form')
           .setLabel('🚑 تقديم على الإسعاف')
@@ -158,7 +158,7 @@ async function handleCommand(interaction) {
 
     await interaction.channel.send({
       embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(btnAmbulance)]
+      components: [new ActionRowBuilder().addComponents(btn)]
     });
 
     await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
@@ -174,13 +174,14 @@ async function handleCommand(interaction) {
     await interaction.deferReply({ ephemeral: true });
 
     const settings = db.settings.get();
-
     const embed = new EmbedBuilder()
       .setColor(0xd4af37)
       .setTitle('📋 نموذج التقديم - وزارة الصحة')
       .setDescription(
-        'اضغط على الزر أدناه لتقديم طلب جديد.\n\n' +
-        '**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
+        (settings.submissions_open
+          ? 'اضغط على الزر أدناه لتقديم طلب جديد.'
+          : 'التقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲') +
+        '\n\n**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
         '**• يجب أن يكون عمرك فوق 15 سنة ✅**\n' +
         '**• يمكنك تقديم طلب واحد فقط كل مرة 📄**\n' +
         '**• بعد المراجعة سيتم إعلامك بنتيجة طلبك 📬**'
@@ -189,7 +190,7 @@ async function handleCommand(interaction) {
       .setFooter({ text: 'وزارة الصحة' })
       .setTimestamp();
 
-    const btnAmbulance = settings.submissions_open
+    const btn = settings.submissions_open
       ? new ButtonBuilder()
           .setCustomId('open_ambulance_form')
           .setLabel('🚑 تقديم على الإسعاف')
@@ -201,7 +202,7 @@ async function handleCommand(interaction) {
 
     await interaction.channel.send({
       embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(btnAmbulance)]
+      components: [new ActionRowBuilder().addComponents(btn)]
     });
 
     await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
@@ -398,7 +399,6 @@ async function sendPersistentForm() {
   if (old) await old.delete().catch(() => {});
 
   const settings = db.settings.get();
-
   const embed = new EmbedBuilder()
     .setColor(0xd4af37)
     .setTitle('📋 نموذج التقديم - وزارة الصحة')
@@ -415,7 +415,7 @@ async function sendPersistentForm() {
     .setFooter({ text: 'وزارة الصحة' })
     .setTimestamp();
 
-  const btnAmbulance = settings.submissions_open
+  const btn = settings.submissions_open
     ? new ButtonBuilder()
         .setCustomId('open_ambulance_form')
         .setLabel('🚑 تقديم على الإسعاف')
@@ -427,7 +427,7 @@ async function sendPersistentForm() {
 
   await channel.send({
     embeds: [embed],
-    components: [new ActionRowBuilder().addComponents(btnAmbulance)]
+    components: [new ActionRowBuilder().addComponents(btn)]
   });
 }
 
@@ -443,13 +443,13 @@ async function sendControlPanel() {
   if (old) await old.delete().catch(() => {});
 
   const settings = db.settings.get();
-
   const embed = new EmbedBuilder()
     .setColor(0xd4af37)
     .setTitle('⚙️ لوحة التحكم - فتح وغلاق التقديم')
     .setDescription(
       '**الحالة الحالية:** ' + (settings.submissions_open ? '✅ **مفتوح**' : '🔒 **مغلق**') +
-      '\n\nاضغط على الزر أدناه لتغيير حالة التقديم.'
+      '\n\nاضغط على الزر أدناه لتغيير حالة التقديم.\n\n' +
+      '> 🛡️ هذا الإجراء مخصص **للمسؤولين** فقط'
     )
     .setFooter({ text: 'وزارة الصحة' })
     .setTimestamp();
@@ -459,8 +459,7 @@ async function sendControlPanel() {
     .setLabel(settings.submissions_open ? '🔒 إغلاق التقديم' : '✅ فتح التقديم')
     .setStyle(settings.submissions_open ? ButtonStyle.Danger : ButtonStyle.Success);
 
-  const row = new ActionRowBuilder().addComponents(toggleBtn);
-  await channel.send({ embeds: [embed], components: [row] });
+  await channel.send({ embeds: [embed], components: [new ActionRowBuilder().addComponents(toggleBtn)] });
 }
 
 async function handleButtonInteraction(interaction) {
