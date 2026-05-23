@@ -148,8 +148,8 @@ async function handleCommand(interaction) {
 
     const btn = settings.submissions_open
       ? new ButtonBuilder()
-          .setCustomId('open_ambulance_form')
-          .setLabel('🚑 تقديم على الإسعاف')
+          .setCustomId('open_form')
+          .setLabel('📋 تقديم طلب')
           .setStyle(ButtonStyle.Success)
       : new ButtonBuilder()
           .setCustomId('submissions_closed')
@@ -192,8 +192,8 @@ async function handleCommand(interaction) {
 
     const btn = settings.submissions_open
       ? new ButtonBuilder()
-          .setCustomId('open_ambulance_form')
-          .setLabel('🚑 تقديم على الإسعاف')
+          .setCustomId('open_form')
+          .setLabel('📋 تقديم طلب')
           .setStyle(ButtonStyle.Success)
       : new ButtonBuilder()
           .setCustomId('submissions_closed')
@@ -417,8 +417,8 @@ async function sendPersistentForm() {
 
   const btn = settings.submissions_open
     ? new ButtonBuilder()
-        .setCustomId('open_ambulance_form')
-        .setLabel('🚑 تقديم على الإسعاف')
+        .setCustomId('open_form')
+        .setLabel('📋 تقديم طلب')
         .setStyle(ButtonStyle.Success)
     : new ButtonBuilder()
         .setCustomId('submissions_closed')
@@ -509,51 +509,6 @@ async function handleButtonInteraction(interaction) {
     return interaction.showModal(modal);
   }
 
-  if (customId === 'open_ambulance_form') {
-    const settings = db.settings.get();
-    if (!settings.submissions_open) {
-      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', flags: MessageFlags.Ephemeral });
-    }
-
-    if (ACTIVATED_ROLE_ID && ACTIVATED_ROLE_ID !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
-      if (!member.roles.cache.has(ACTIVATED_ROLE_ID)) {
-        return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', flags: MessageFlags.Ephemeral });
-      }
-    }
-
-    const userApps = db.applications.getByUser(interaction.user.id);
-    if (userApps.some(a => a.status === 'pending')) {
-      return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', flags: MessageFlags.Ephemeral });
-    }
-
-    const modal = new ModalBuilder()
-      .setCustomId('ambulance_form')
-      .setTitle('🚑 نموذج التقديم - الإسعاف');
-
-    const fullName = new TextInputBuilder()
-      .setCustomId('full_name').setLabel('اسمك')
-      .setStyle(TextInputStyle.Short).setPlaceholder('أدخل اسمك الكامل')
-      .setMaxLength(100).setRequired(true);
-
-    const age = new TextInputBuilder()
-      .setCustomId('age').setLabel('عمرك')
-      .setStyle(TextInputStyle.Short).setPlaceholder('مثال: 25')
-      .setMaxLength(3).setRequired(true);
-
-    const reason = new TextInputBuilder()
-      .setCustomId('reason').setLabel('سبب التقديم')
-      .setStyle(TextInputStyle.Paragraph).setPlaceholder('اكتب سبب تقديمك هنا...')
-      .setMaxLength(1000).setRequired(true);
-
-    modal.addComponents(
-      new ActionRowBuilder().addComponents(fullName),
-      new ActionRowBuilder().addComponents(age),
-      new ActionRowBuilder().addComponents(reason)
-    );
-
-    return interaction.showModal(modal);
-  }
-
   if (customId === 'submissions_closed') {
     const CLOSED_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507564528445948035/e55c93c4-1db1-443a-86af-ee6a0311e721.png?ex=6a125c60&is=6a110ae0&hm=fc995b702e1a0a33499232b6807f728044f7a782aab95ee370320e621c67164c';
     const embed = new EmbedBuilder()
@@ -568,12 +523,13 @@ async function handleButtonInteraction(interaction) {
     if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE' && !member.roles.cache.has(ADMIN_ROLE_ID)) {
       return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
     }
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
     const settings = db.settings.get();
     const newValue = !settings.submissions_open;
     db.settings.update('submissions_open', newValue);
     await sendControlPanel();
     await sendPersistentForm();
-    await interaction.reply({ content: newValue ? '✅ تم فتح التقديم!' : '🔒 تم إغلاق التقديم!', flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ content: newValue ? '✅ تم فتح التقديم!' : '🔒 تم إغلاق التقديم!' });
     return;
   }
 
@@ -586,6 +542,8 @@ async function handleButtonInteraction(interaction) {
     const app = db.applications.getById(appId);
     if (!app) return interaction.reply({ content: '❌ لم يتم العثور على الطلب.', flags: MessageFlags.Ephemeral });
     if (app.status !== 'pending') return interaction.reply({ content: '❌ تم معالجة هذا الطلب بالفعل.', flags: MessageFlags.Ephemeral });
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     db.applications.update(appId, {
       status: 'approved',
@@ -643,7 +601,7 @@ async function handleButtonInteraction(interaction) {
       .setFooter({ text: `تم القبول في ${new Date().toLocaleString('ar-EG')}` });
 
     await interaction.message.edit({ embeds: [embed], components: [] });
-    await interaction.reply({ content: '✅ تم قبول الطلب بنجاح!', flags: MessageFlags.Ephemeral });
+    await interaction.editReply({ content: '✅ تم قبول الطلب بنجاح!' });
 
   } else if (customId.startsWith('reject_')) {
     const appId = customId.replace('reject_', '');

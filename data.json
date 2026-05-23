@@ -73,6 +73,34 @@
       "reviewed_at": "2026-05-23T04:59:12.862Z",
       "created_at": "2026-05-23T04:59:07.538Z",
       "reviewed_by_id": "767470330025214052"
+    },
+    {
+      "id": "mphs3at304uuhf",
+      "full_name": "يسب",
+      "age": 33,
+      "reason": "شسي",
+      "discord_user_id": "767470330025214052",
+      "discord_username": "ghazwan.mg",
+      "status": "rejected",
+      "rejection_reason": "سشي",
+      "reviewed_by": "ghazwan.mg",
+      "reviewed_at": "2026-05-23T06:18:05.428Z",
+      "created_at": "2026-05-23T06:17:56.748Z",
+      "reviewed_by_id": "767470330025214052"
+    },
+    {
+      "id": "mphs3vhumwq9mk",
+      "full_name": "شسي",
+      "age": 22,
+      "reason": "سيش",
+      "discord_user_id": "767470330025214052",
+      "discord_username": "ghazwan.mg",
+      "status": "approved",
+      "rejection_reason": null,
+      "reviewed_by": "ghazwan.mg",
+      "reviewed_at": "2026-05-23T06:18:33.816Z",
+      "created_at": "2026-05-23T06:18:23.538Z",
+      "reviewed_by_id": "767470330025214052"
     }
   ],
   "logs": [
@@ -165,6 +193,42 @@
       "performed_by_id": "767470330025214052",
       "details": "تم رفض طلب شسي بواسطة ghazwan.mg بسبب: بلا",
       "created_at": "2026-05-23T04:59:12.874Z"
+    },
+    {
+      "id": "mphs3au0yrs0v2",
+      "application_id": "mphs3at304uuhf",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب جديد بواسطة يسب",
+      "created_at": "2026-05-23T06:17:56.760Z"
+    },
+    {
+      "id": "mphs3hj56o5k7k",
+      "application_id": "mphs3at304uuhf",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب يسب بواسطة ghazwan.mg بسبب: سشي",
+      "created_at": "2026-05-23T06:18:05.441Z"
+    },
+    {
+      "id": "mphs3votnd5vzi",
+      "application_id": "mphs3vhumwq9mk",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب جديد بواسطة شسي",
+      "created_at": "2026-05-23T06:18:23.789Z"
+    },
+    {
+      "id": "mphs43fo8vnjak",
+      "application_id": "mphs3vhumwq9mk",
+      "action": "approve",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم قبول طلب شسي بواسطة ghazwan.mg",
+      "created_at": "2026-05-23T06:18:33.828Z"
     }
   ],
   "settings": {
