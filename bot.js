@@ -38,7 +38,9 @@ function initializeBot() {
         await handleButtonInteraction(interaction);
       }
     } catch (err) {
-      console.error('خطأ:', err);
+      const type = interaction.isChatInputCommand() ? 'command' : interaction.isButton() ? 'button' : interaction.isModalSubmit() ? 'modal' : 'other';
+      const id = interaction.customId || interaction.commandName || '?';
+      console.error(`❌ خطأ [${type}] [${id}]:`, err.message || err);
       const msg = { content: '❌ حدث خطأ أثناء معالجة الطلب', flags: MessageFlags.Ephemeral };
       if (interaction.deferred || interaction.replied) {
         await interaction.followUp(msg).catch(() => {});
@@ -467,7 +469,7 @@ async function handleButtonInteraction(interaction) {
   const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
 
   if (customId === 'open_form') {
-    const settings = await db.settings.get();
+    const settings = db.fast.settings;
     if (!settings.submissions_open) {
       return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', flags: MessageFlags.Ephemeral });
     }
@@ -478,7 +480,7 @@ async function handleButtonInteraction(interaction) {
       }
     }
 
-    const userApps = await db.applications.getByUser(interaction.user.id);
+    const userApps = db.fast.getUserApps(interaction.user.id);
     if (userApps.some(a => a.status === 'pending')) {
       return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', flags: MessageFlags.Ephemeral });
     }

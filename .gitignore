@@ -1,3 +1,5 @@
 node_modules/
 data.json
 .env
+bot_out.txt
+bot_err.txt
