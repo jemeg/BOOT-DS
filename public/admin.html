@@ -125,6 +125,9 @@
         </h1>
       </div>
       <div class="admin-controls">
+        <button class="btn btn-outline-gold" onclick="toggleSubmissions()" id="toggleBtn">
+          <i class="fas fa-toggle-on"></i> <span id="toggleLabel">...جاري</span>
+        </button>
         <button class="btn btn-outline-gold" onclick="location.reload()">
           <i class="fas fa-sync"></i> تحديث
         </button>
@@ -161,18 +164,45 @@
     let allApps = [];
     let currentFilter = 'all';
 
+    let submissionsOpen = true;
+
     async function loadData() {
-      const [appsRes, logsRes, statsRes] = await Promise.all([
+      const [appsRes, logsRes, statsRes, settingsRes] = await Promise.all([
         fetch('/api/applications'),
         fetch('/api/logs'),
-        fetch('/api/stats')
+        fetch('/api/stats'),
+        fetch('/api/settings')
       ]);
       allApps = await appsRes.json();
       const logs = await logsRes.json();
       const stats = await statsRes.json();
+      const settings = await settingsRes.json();
+      submissionsOpen = settings.submissions_open;
       renderStats(stats);
       renderTable();
       renderLogs(logs);
+      updateToggleBtn();
+    }
+
+    function updateToggleBtn() {
+      const btn = document.getElementById('toggleBtn');
+      const lbl = document.getElementById('toggleLabel');
+      if (submissionsOpen) {
+        btn.className = 'btn btn-outline-danger';
+        lbl.innerHTML = '<i class="fas fa-lock-open"></i> إغلاق التقديم';
+      } else {
+        btn.className = 'btn btn-outline-success';
+        lbl.innerHTML = '<i class="fas fa-lock"></i> فتح التقديم';
+      }
+    }
+
+    async function toggleSubmissions() {
+      const res = await fetch('/api/settings/toggle-submissions', { method: 'POST' });
+      const data = await res.json();
+      submissionsOpen = data.submissions_open;
+      updateToggleBtn();
+      alert(data.message);
+      loadData();
     }
 
     function renderStats(stats) {
