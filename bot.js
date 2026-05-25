@@ -28,7 +28,7 @@ async function resolveTextChannel(guild, channelId, label) {
     }
   }
 
-  if (!channel || !channel.isTextBased()) {
+  if (!channel || !channel.isText()) {
     console.error(`❌ ${label} (${channelId}) ليس روم نصي صالحًا.`);
     return null;
   }
@@ -457,7 +457,7 @@ async function sendPersistentForm() {
     .setDescription(
       (settings.submissions_open
         ? 'اضغط على الزر أدناه لتقديم طلب جديد.'
-        : 'التقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲') +
+        : 'التقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريباً إن شاء الله 🤲') +
       '\n\n**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
       '**• يجب أن يكون عمرك فوق 15 سنة ✅**\n' +
       '**• يمكنك تقديم طلب واحد فقط كل مرة 📄**\n' +
@@ -524,7 +524,7 @@ async function handleButtonInteraction(interaction) {
       const embed = new EmbedBuilder()
         .setColor(0xdc3545)
         .setImage('attachment://emg1.png')
-        .setFooter({ text: 'وزارة الصحة' })
+        .setFooter({ text: ' وزارة الصحة' })
         .setTimestamp();
 
       return interaction.reply({
@@ -547,7 +547,7 @@ async function handleButtonInteraction(interaction) {
       }
     }
 
-    const userApps = db.fast.getUserApps(interaction.user.id);
+    const userApps = await db.applications.getByUser(interaction.user.id);
     if (userApps.some(a => a.status === 'pending')) {
       return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', flags: MessageFlags.Ephemeral });
     }
@@ -586,7 +586,7 @@ async function handleButtonInteraction(interaction) {
       .setColor(0xdc3545) // أحمر واضح
       .setImage(CLOSED_IMAGE)
       .setDescription('التقديم مغلق حالياً ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريباً إن شاء الله 🤲')
-      .setFooter({ text: 'وزارة الصحة' })
+      .setFooter({ text: ' وزارة الصحة' })
       .setTimestamp();
     return interaction.reply({
       embeds: [embed],
@@ -671,7 +671,7 @@ async function handleButtonInteraction(interaction) {
           `**🔍 تفاصيل القبول**\n` +
           `**👮 بواسطة:** ${interaction.user.tag}`
         )
-        .setFooter({ text: 'وزارة الصحة' })
+        .setFooter({ text: ' وزارة الصحة' })
         .setTimestamp();
       await logsChannel.send({ embeds: [logEmbed] });
     }
@@ -683,7 +683,7 @@ async function handleButtonInteraction(interaction) {
           .setColor(0x28a745)
           .setTitle('✅ تم قبول طلبك!')
           .setDescription(`مرحباً ${app.full_name}، تم قبول طلب التقديم الخاص بك.`)
-          .setFooter({ text: 'وزارة الصحة' })
+          .setFooter({ text: ' وزارة الصحة' })
           .setTimestamp();
         await targetMember.send({ embeds: [notifyEmbed] }).catch(() => {});
 
