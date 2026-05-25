@@ -28,7 +28,7 @@ async function resolveTextChannel(guild, channelId, label) {
     }
   }
 
-  if (!channel || !channel.isText()) {
+  if (!channel || !channel.isTextBased()) {
     console.error(`❌ ${label} (${channelId}) ليس روم نصي صالحًا.`);
     return null;
   }
