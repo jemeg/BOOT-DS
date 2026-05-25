@@ -153,9 +153,6 @@ async function registerCommands() {
       .setName('مساعدة')
       .setDescription('📚 عرض قائمة الأوامر المتاحة'),
     new SlashCommandBuilder()
-      .setName('نشر')
-      .setDescription('📋 نشر نموذج التقديم في الروم الحالي (للمسؤولين)'),
-    new SlashCommandBuilder()
       .setName('لوحة_التحكم')
       .setDescription('⚙️ نشر لوحة التحكم في الروم الحالي (للمسؤولين)'),
   ];
@@ -214,51 +211,6 @@ async function handleCommand(interaction) {
     return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
   } else if (interaction.commandName === 'تقديم') {
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-    const settings = await db.settings.get();
-    const embed = new EmbedBuilder()
-      .setColor(0xd4af37)
-      .setTitle('📋 نموذج التقديم - وزارة الصحة')
-      .setDescription(
-        (settings.submissions_open
-          ? 'اضغط على الزر أدناه لتقديم طلب جديد.'
-          : 'التقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲') +
-        '\n\n**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
-        '**• يجب أن يكون عمرك فوق 15 سنة ✅**\n' +
-        '**• يمكنك تقديم طلب واحد فقط كل مرة 📄**\n' +
-        '**• بعد المراجعة سيتم إعلامك بنتيجة طلبك 📬**'
-      )
-      .setImage(FORM_IMAGE)
-      .setFooter({ text: 'وزارة الصحة' })
-      .setTimestamp();
-
-    const btn = settings.submissions_open
-      ? new ButtonBuilder()
-          .setCustomId('open_form')
-          .setLabel('📋 تقديم طلب')
-          .setStyle(ButtonStyle.Success)
-      : new ButtonBuilder()
-          .setCustomId('submissions_closed')
-          .setLabel('🔒 التقديم مغلق')
-          .setStyle(ButtonStyle.Danger); // أحمر واضح
-
-    await interaction.channel.send({
-      embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(btn)],
-      files: [{ attachment: LOCAL_IMAGES.form, name: 'emg3.png' }],
-    });
-
-    await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
-
-  } else if (interaction.commandName === 'نشر') {
-    const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
-    if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE') {
-      if (!interaction.member.roles.cache.has(ADMIN_ROLE_ID)) {
-        return interaction.reply({ content: '❌ هذا الأمر مخصص للمسؤولين فقط.', flags: MessageFlags.Ephemeral });
-      }
-    }
-
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const settings = await db.settings.get();
@@ -664,9 +616,9 @@ async function handleButtonInteraction(interaction) {
     } catch (err) {
       console.error('فشل تحديث الزر:', err);
     }
-    
+
     await sendPersistentForm();
-    
+
     await interaction.editReply({ content: newValue ? '✅ تم فتح التقديم' : '🔒 تم إغلاق التقديم' });
     return;
   }
