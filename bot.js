@@ -1,7 +1,14 @@
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, SlashCommandBuilder, REST, Routes, MessageFlags } = require('discord.js');
+const path = require('path');
 const db = require('./db');
 
-const FORM_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563829/1507484501562101883/f9f2318f-7bb3-49bc-9f0b-42b4834bf827.png';
+const LOCAL_IMAGES = {
+  form: path.join(__dirname, 'emg3.png'),
+  control: path.join(__dirname, 'emg2.png'),
+  closed: path.join(__dirname, 'emg1.png'),
+};
+
+const FORM_IMAGE = 'attachment://emg3.png';
 
 let client = null;
 
@@ -38,7 +45,7 @@ async function findPersistentFormMessage(channel) {
 }
 
 function buildControlPanelPayload(settings) {
-  const CONTROL_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507566493863510036/6a06818e-cbbb-4e21-ae2d-b881781ea41b.png?ex=6a125e35&is=6a110cb5&hm=719cc88e347a8e6bf573afd3876804338a43a70296b75fe3d0449326aa17ba4f';
+  const CONTROL_IMAGE = 'attachment://emg2.png';
   const embed = new EmbedBuilder()
     .setColor(0xd4af37)
     .setTitle('⚙️ لوحة التحكم - فتح وغلاق التقديم')
@@ -51,7 +58,11 @@ function buildControlPanelPayload(settings) {
     .setLabel(settings.submissions_open ? '🔒 إغلاق التقديم' : '✅ فتح التقديم')
     .setStyle(settings.submissions_open ? ButtonStyle.Danger : ButtonStyle.Success);
 
-  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(toggleBtn)] };
+  return {
+    embeds: [embed],
+    components: [new ActionRowBuilder().addComponents(toggleBtn)],
+    files: [{ attachment: LOCAL_IMAGES.control, name: 'emg2.png' }],
+  };
 }
 
 async function postControlPanelToChannel(channel, settings = null) {
@@ -226,11 +237,12 @@ async function handleCommand(interaction) {
       : new ButtonBuilder()
           .setCustomId('submissions_closed')
           .setLabel('🔒 التقديم مغلق')
-          .setStyle(ButtonStyle.Danger);
+          .setStyle(ButtonStyle.Danger); // أحمر واضح
 
     await interaction.channel.send({
       embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(btn)]
+      components: [new ActionRowBuilder().addComponents(btn)],
+      files: [{ attachment: LOCAL_IMAGES.form, name: 'emg3.png' }],
     });
 
     await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
@@ -270,11 +282,12 @@ async function handleCommand(interaction) {
       : new ButtonBuilder()
           .setCustomId('submissions_closed')
           .setLabel('🔒 التقديم مغلق')
-          .setStyle(ButtonStyle.Danger);
+          .setStyle(ButtonStyle.Danger); // أحمر واضح
 
     await interaction.channel.send({
       embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(btn)]
+      components: [new ActionRowBuilder().addComponents(btn)],
+      files: [{ attachment: LOCAL_IMAGES.form, name: 'emg3.png' }],
     });
 
     await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
@@ -506,9 +519,13 @@ async function sendPersistentForm() {
     : new ButtonBuilder()
         .setCustomId('submissions_closed')
         .setLabel('🔒 التقديم مغلق')
-        .setStyle(ButtonStyle.Danger);
+        .setStyle(ButtonStyle.Danger); // أحمر واضح
 
-  const payload = { embeds: [embed], components: [new ActionRowBuilder().addComponents(btn)] };
+  const payload = {
+    embeds: [embed],
+    components: [new ActionRowBuilder().addComponents(btn)],
+    files: [{ attachment: LOCAL_IMAGES.form, name: 'emg3.png' }],
+  };
 
   if (old) {
     try {
@@ -594,13 +611,18 @@ async function handleButtonInteraction(interaction) {
   }
 
   if (customId === 'submissions_closed') {
-    const CLOSED_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507564528445948035/e55c93c4-1db1-443a-86af-ee6a0311e721.png?ex=6a125c60&is=6a110ae0&hm=fc995b702e1a0a33499232b6807f728044f7a782aab95ee370320e621c67164c';
+    const CLOSED_IMAGE = 'attachment://emg1.png';
     const embed = new EmbedBuilder()
-      .setColor(0xd4af37)
+      .setColor(0xdc3545) // أحمر واضح
       .setImage(CLOSED_IMAGE)
+      .setDescription('التقديم مغلق حالياً ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريباً إن شاء الله 🤲')
       .setFooter({ text: 'وزارة الصحة' })
       .setTimestamp();
-    return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
+    return interaction.reply({
+      embeds: [embed],
+      files: [{ attachment: LOCAL_IMAGES.closed, name: 'emg1.png' }],
+      flags: MessageFlags.Ephemeral,
+    });
   }
 
   if (customId === 'toggle_submissions') {
