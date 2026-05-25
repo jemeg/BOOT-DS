@@ -44,7 +44,7 @@ async function findPersistentFormMessage(channel) {
   ) || messages.find(m => m.author.id === client.user.id && m.components.length > 0);
 }
 
-function buildControlPanelPayload(settings) {
+function buildControlPanelPayload(settings, includeFile = true) {
   const CONTROL_IMAGE = 'attachment://emg2.png';
   const embed = new EmbedBuilder()
     .setColor(0xd4af37)
@@ -58,18 +58,22 @@ function buildControlPanelPayload(settings) {
     .setLabel(settings.submissions_open ? '🔒 إغلاق التقديم' : '✅ فتح التقديم')
     .setStyle(settings.submissions_open ? ButtonStyle.Danger : ButtonStyle.Success);
 
-  return {
+  const payload = {
     embeds: [embed],
     components: [new ActionRowBuilder().addComponents(toggleBtn)],
-    files: [{ attachment: LOCAL_IMAGES.control, name: 'emg2.png' }],
   };
+
+  if (includeFile) {
+    payload.files = [{ attachment: LOCAL_IMAGES.control, name: 'emg2.png' }];
+  }
+
+  return payload;
 }
 
 async function postControlPanelToChannel(channel, settings = null) {
   if (!channel) return false;
 
   const currentSettings = settings || await db.settings.get();
-  const payload = buildControlPanelPayload(currentSettings);
   const messages = await channel.messages.fetch({ limit: 30 });
   const old = messages.find(m =>
     m.author.id === client.user.id &&
@@ -77,11 +81,11 @@ async function postControlPanelToChannel(channel, settings = null) {
   );
 
   if (old) {
-    await old.edit(payload).catch(() => {});
+    await old.edit(buildControlPanelPayload(currentSettings, false)).catch(() => {});
     return true;
   }
 
-  await channel.send(payload);
+  await channel.send(buildControlPanelPayload(currentSettings, true));
   return true;
 }
 
@@ -521,7 +525,11 @@ async function sendPersistentForm() {
         .setLabel('🔒 التقديم مغلق')
         .setStyle(ButtonStyle.Danger); // أحمر واضح
 
-  const payload = {
+  const editPayload = {
+    embeds: [embed],
+    components: [new ActionRowBuilder().addComponents(btn)],
+  };
+  const sendPayload = {
     embeds: [embed],
     components: [new ActionRowBuilder().addComponents(btn)],
     files: [{ attachment: LOCAL_IMAGES.form, name: 'emg3.png' }],
@@ -529,7 +537,7 @@ async function sendPersistentForm() {
 
   if (old) {
     try {
-      await old.edit(payload);
+      await old.edit(editPayload);
       return;
     } catch (err) {
       console.error('❌ فشل تحديث رسالة النموذج، سأعيد نشرها:', err.message || err);
@@ -539,7 +547,7 @@ async function sendPersistentForm() {
     }
   }
 
-  await channel.send(payload);
+  await channel.send(sendPayload);
 }
 
 async function sendControlPanel() {
@@ -561,7 +569,17 @@ async function handleButtonInteraction(interaction) {
   if (customId === 'open_form') {
     const settings = db.fast.settings;
     if (!settings.submissions_open) {
-      return interaction.reply({ content: 'شكرًا لاهتمامك ❤️\nالتقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲', flags: MessageFlags.Ephemeral });
+      const embed = new EmbedBuilder()
+        .setColor(0xdc3545)
+        .setImage('attachment://emg1.png')
+        .setFooter({ text: 'وزارة الصحة' })
+        .setTimestamp();
+
+      return interaction.reply({
+        embeds: [embed],
+        files: [{ attachment: LOCAL_IMAGES.closed, name: 'emg1.png' }],
+        flags: MessageFlags.Ephemeral,
+      });
     }
 
     if (ACTIVATED_ROLE_ID && ACTIVATED_ROLE_ID !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
