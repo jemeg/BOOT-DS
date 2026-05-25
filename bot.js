@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { Client, GatewayIntentBits, EmbedBuilder, ButtonBuilder, ButtonStyle, ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, SlashCommandBuilder, REST, Routes, MessageFlags } = require('discord.js');
 const path = require('path');
 const db = require('./db');
@@ -34,6 +35,14 @@ async function resolveTextChannel(guild, channelId, label) {
   }
 
   return channel;
+}
+
+async function getGuild() {
+  if (!client || !client.isReady()) {
+    return null;
+  }
+
+  return client.guilds.cache.get(process.env.GUILD_ID) || (await client.guilds.fetch(process.env.GUILD_ID).catch(() => null));
 }
 
 async function findPersistentFormMessage(channel) {
@@ -106,16 +115,23 @@ function initializeBot() {
 
   const token = process.env.BOT_TOKEN;
   if (!token) {
-    console.warn('⚠️ لم يتم تعيين توكن البوت. البوت لن يعمل.');
-    return null;
+    throw new Error('⚠️ لم يتم تعيين توكن البوت في المتغيرات.');
   }
 
-  client.once('ready', async () => {
+  client.once('clientReady', async () => {
     console.log(`✅ البوت متصل كـ ${client.user.tag}`);
-    await registerCommands();
-    await sendPersistentForm();
-    await sendControlPanel();
+    try {
+      await registerCommands();
+      await sendPersistentForm();
+      await sendControlPanel();
+    } catch (err) {
+      console.error('❌ فشل تهيئة البوت بعد الاتصال:', err.message || err);
+    }
   });
+
+  client.on('reconnecting', () => console.warn('🔄 جارٍ إعادة الاتصال مع Discord...'));
+  client.on('warn', (info) => console.warn('⚠️ تحذير Discord:', info));
+  client.on('error', (err) => console.error('❌ خطأ في عميل Discord:', err.message || err));
 
   client.on('interactionCreate', async (interaction) => {
     try {
@@ -143,7 +159,11 @@ function initializeBot() {
     }
   });
 
-  client.login(token);
+  client.login(token).catch((err) => {
+    console.error('❌ فشل تسجيل الدخول:', err.message || err);
+    process.exit(1);
+  });
+
   return client;
 }
 
@@ -467,7 +487,8 @@ async function sendPersistentForm() {
   const channelId = process.env.FORM_CHANNEL_ID;
   if (!channelId || channelId === 'YOUR_FORM_CHANNEL_ID_HERE') return;
 
-  const channel = await resolveTextChannel(client.guilds.cache.get(process.env.GUILD_ID), channelId, 'قناة النموذج');
+  const guild = await getGuild();
+  const channel = await resolveTextChannel(guild, channelId, 'قناة النموذج');
   if (!channel) return;
 
   const old = await findPersistentFormMessage(channel);
@@ -529,7 +550,8 @@ async function sendControlPanel() {
   const channelId = process.env.CONTROL_CHANNEL_ID;
   if (!channelId || channelId === 'YOUR_CONTROL_CHANNEL_ID_HERE') return;
 
-  const channel = await resolveTextChannel(client.guilds.cache.get(process.env.GUILD_ID), channelId, 'قناة التحكم');
+  const guild = await getGuild();
+  const channel = await resolveTextChannel(guild, channelId, 'قناة التحكم');
   if (!channel) return;
 
   await postControlPanelToChannel(channel);
