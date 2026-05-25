@@ -5,10 +5,6 @@ const FORM_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563829/1
 
 let client = null;
 
-function getClient() {
-  return client;
-}
-
 function initializeBot() {
   client = new Client({
     intents: [
@@ -20,7 +16,7 @@ function initializeBot() {
   });
 
   const token = process.env.BOT_TOKEN;
-  if (!token || token === 'MTUwNzQ1ODc4OTU2NDIxOTQ1Mg.GjUTZh.fG088OirA1nUVUoKVjxm_moeJ-k3ckadO7epDM') {
+  if (!token) {
     console.warn('⚠️ لم يتم تعيين توكن البوت. البوت لن يعمل.');
     return null;
   }
@@ -115,13 +111,11 @@ async function handleCommand(interaction) {
     const statusMap = { pending: '⏳ قيد المراجعة', approved: '✅ مقبول', rejected: '❌ مرفوض' };
     const date = new Date(latest.created_at + 'Z').toLocaleString('ar-EG');
 
-    const typeLabel = latest.type === 'ambulance' ? '🚑 إسعاف' : '📋 عام';
     const embed = new EmbedBuilder()
       .setColor(latest.status === 'approved' ? 0x28a745 : latest.status === 'rejected' ? 0xdc3545 : 0xf39c12)
       .setTitle('📋 حالة طلبك')
       .addFields(
         { name: 'الاسم', value: latest.full_name, inline: true },
-        { name: 'نوع الطلب', value: typeLabel, inline: true },
         { name: 'الحالة', value: statusMap[latest.status] || latest.status, inline: true },
         { name: 'تاريخ التقديم', value: date, inline: false },
       );
@@ -221,8 +215,8 @@ async function handleModalSubmit(interaction) {
     const age = interaction.fields.getTextInputValue('age');
     const reason = interaction.fields.getTextInputValue('reason');
 
-    if (isNaN(age) || parseInt(age) < 1 || parseInt(age) > 150) {
-      return interaction.reply({ content: '❌ العمر يجب أن يكون رقماً صحيحاً بين 1 و 150', flags: MessageFlags.Ephemeral });
+    if (isNaN(age) || parseInt(age) < 16 || parseInt(age) > 150) {
+      return interaction.reply({ content: '❌ العمر يجب أن يكون رقماً صحيحاً فوق 15 سنة', flags: MessageFlags.Ephemeral });
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -244,34 +238,6 @@ async function handleModalSubmit(interaction) {
 
     await sendApplicationToDiscord(app, interaction.guild);
 
-  } else if (interaction.customId === 'ambulance_form') {
-    const full_name = interaction.fields.getTextInputValue('full_name');
-    const age = interaction.fields.getTextInputValue('age');
-    const reason = interaction.fields.getTextInputValue('reason');
-
-    if (isNaN(age) || parseInt(age) < 1 || parseInt(age) > 150) {
-      return interaction.reply({ content: '❌ العمر يجب أن يكون رقماً صحيحاً بين 1 و 150', flags: MessageFlags.Ephemeral });
-    }
-
-    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-
-    const app = await db.applications.create({
-      type: 'ambulance', full_name, age: parseInt(age), reason,
-      discord_user_id: interaction.user.id,
-      discord_username: interaction.user.username
-    });
-
-    await db.logs.create({
-      application_id: app.id, action: 'submit',
-      performed_by: interaction.user.username,
-      performed_by_id: interaction.user.id,
-      details: `تقديم طلب إسعاف جديد بواسطة ${full_name}`
-    });
-
-    await interaction.editReply({ content: '✅ تم إرسال طلب الإسعاف بنجاح! سيتم مراجعته من قبل المسؤولين.' });
-
-    await sendApplicationToDiscord(app, interaction.guild);
-
   } else if (interaction.customId.startsWith('reject_reason_')) {
     const appId = interaction.customId.replace('reject_reason_', '');
     const reason = interaction.fields.getTextInputValue('rejection_reason');
@@ -283,7 +249,14 @@ async function handleModalSubmit(interaction) {
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
     const guild = client.guilds.cache.get(process.env.GUILD_ID);
-    const channel = guild?.channels.cache.get(process.env.REQUESTS_CHANNEL_ID);
+    let channel = guild?.channels.cache.get(process.env.REQUESTS_CHANNEL_ID);
+    if (!channel) {
+      try {
+        channel = await guild?.channels.fetch(process.env.REQUESTS_CHANNEL_ID);
+      } catch (err) {
+        console.error('فشل جلب رو الطلبات:', err);
+      }
+    }
 
     await db.applications.update(appId, {
       status: 'rejected',
@@ -300,7 +273,14 @@ async function handleModalSubmit(interaction) {
       details: `تم رفض طلب ${app.full_name} بواسطة ${interaction.user.tag} بسبب: ${reason}`
     });
 
-    const logsChannel = guild?.channels.cache.get(process.env.LOGS_CHANNEL_ID);
+    let logsChannel = guild?.channels.cache.get(process.env.LOGS_CHANNEL_ID);
+    if (!logsChannel) {
+      try {
+        logsChannel = await guild?.channels.fetch(process.env.LOGS_CHANNEL_ID);
+      } catch (err) {
+        console.error('فشل جلب رو السجلات:', err);
+      }
+    }
     if (logsChannel) {
       const logEmbed = new EmbedBuilder()
         .setColor(0xdc3545)
@@ -359,18 +339,35 @@ async function handleModalSubmit(interaction) {
 }
 
 async function sendApplicationToDiscord(application, guild) {
-  if (!client || !client.isReady()) return;
+  if (!client || !client.isReady()) {
+    console.error('البوت غير جاهز لإرسال الطلب');
+    return;
+  }
 
-  const channel = guild.channels.cache.get(process.env.REQUESTS_CHANNEL_ID);
-  if (!channel) return;
+  const channelId = process.env.REQUESTS_CHANNEL_ID;
+  console.log(`محاولة إرسال الطلب إلى الروم: ${channelId}`);
+
+  let channel = guild.channels.cache.get(channelId);
+  if (!channel) {
+    try {
+      channel = await guild.channels.fetch(channelId);
+      console.log(`تم جلب الروم بنجاح: ${channel.name}`);
+    } catch (err) {
+      console.error(`فشل جلب الروم ${channelId}:`, err);
+      return;
+    }
+  }
+  if (!channel) {
+    console.error(`الروم ${channelId} غير موجود`);
+    return;
+  }
 
   const user = await client.users.fetch(application.discord_user_id).catch(() => null);
 
-  const isAmbulance = application.type === 'ambulance';
   const embed = new EmbedBuilder()
-    .setColor(isAmbulance ? 0xe74c3c : 0x3498db)
-    .setTitle(isAmbulance ? '🚑 طلب تقديم إسعاف جديد' : '📋 طلب تقديم جديد')
-    .setThumbnail(user?.displayAvatarURL() || (isAmbulance ? 'https://cdn-icons-png.flaticon.com/512/3308/3308395.png' : 'https://cdn-icons-png.flaticon.com/512/3308/3308395.png'))
+    .setColor(0x3498db)
+    .setTitle('📋 طلب تقديم جديد')
+    .setThumbnail(user?.displayAvatarURL() || 'https://cdn-icons-png.flaticon.com/512/3308/3308395.png')
     .addFields(
       { name: '👤 الاسم', value: application.full_name, inline: true },
       { name: '🎂 العمر', value: String(application.age), inline: true },
@@ -392,14 +389,27 @@ async function sendApplicationToDiscord(application, guild) {
 
   const row = new ActionRowBuilder().addComponents(approveBtn, rejectBtn);
 
-  await channel.send({ embeds: [embed], components: [row] });
+  try {
+    await channel.send({ embeds: [embed], components: [row] });
+    console.log(`تم إرسال الطلب ${application.id} بنجاح إلى الروم`);
+  } catch (err) {
+    console.error(`فشل إرسال الطلب ${application.id} إلى الروم:`, err);
+  }
 }
 
 async function sendPersistentForm() {
   if (!client || !client.isReady()) return;
   const channelId = process.env.FORM_CHANNEL_ID;
   if (!channelId || channelId === 'YOUR_FORM_CHANNEL_ID_HERE') return;
-  const channel = client.channels.cache.get(channelId);
+  let channel = client.channels.cache.get(channelId);
+  if (!channel) {
+    try {
+      channel = await client.channels.fetch(channelId);
+    } catch (err) {
+      console.error('فشل جلب رو النموذج:', err);
+      return;
+    }
+  }
   if (!channel) return;
 
   const messages = await channel.messages.fetch({ limit: 20 });
@@ -449,7 +459,15 @@ async function sendControlPanel() {
   if (!client || !client.isReady()) return;
   const channelId = process.env.CONTROL_CHANNEL_ID;
   if (!channelId || channelId === 'YOUR_CONTROL_CHANNEL_ID_HERE') return;
-  const channel = client.channels.cache.get(channelId);
+  let channel = client.channels.cache.get(channelId);
+  if (!channel) {
+    try {
+      channel = await client.channels.fetch(channelId);
+    } catch (err) {
+      console.error('فشل جلب رو التحكم:', err);
+      return;
+    }
+  }
   if (!channel) return;
 
   const messages = await channel.messages.fetch({ limit: 20 });
@@ -490,6 +508,13 @@ async function handleButtonInteraction(interaction) {
     if (ACTIVATED_ROLE_ID && ACTIVATED_ROLE_ID !== 'YOUR_ACTIVATED_ROLE_ID_HERE') {
       if (!member.roles.cache.has(ACTIVATED_ROLE_ID)) {
         return interaction.reply({ content: '❌ يجب أن تمتلك رتبة **مفعل** لتتمكن من التقديم.', flags: MessageFlags.Ephemeral });
+      }
+    }
+
+    const APPROVED_ROLE_ID = process.env.APPROVED_ROLE_ID;
+    if (APPROVED_ROLE_ID && APPROVED_ROLE_ID !== 'YOUR_APPROVED_ROLE_ID_HERE') {
+      if (member.roles.cache.has(APPROVED_ROLE_ID)) {
+        return interaction.reply({ content: '❌ لديك بالفعل رتبة **مقبول**، لا يمكنك التقديم مجدداً.', flags: MessageFlags.Ephemeral });
       }
     }
 
@@ -541,6 +566,8 @@ async function handleButtonInteraction(interaction) {
       return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
     }
     
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
     const settings = await db.settings.get();
     const newValue = !settings.submissions_open;
     await db.settings.update('submissions_open', newValue);
@@ -558,6 +585,7 @@ async function handleButtonInteraction(interaction) {
     
     await sendPersistentForm();
     
+    await interaction.editReply({ content: newValue ? '✅ تم فتح التقديم' : '🔒 تم إغلاق التقديم' });
     return;
   }
 
@@ -587,7 +615,14 @@ async function handleButtonInteraction(interaction) {
       details: `تم قبول طلب ${app.full_name} بواسطة ${interaction.user.tag}`
     });
 
-    const logsChannel = guild.channels.cache.get(process.env.LOGS_CHANNEL_ID);
+    let logsChannel = guild.channels.cache.get(process.env.LOGS_CHANNEL_ID);
+    if (!logsChannel) {
+      try {
+        logsChannel = await guild.channels.fetch(process.env.LOGS_CHANNEL_ID);
+      } catch (err) {
+        console.error('فشل جلب رو السجلات:', err);
+      }
+    }
     if (logsChannel) {
       const logEmbed = new EmbedBuilder()
         .setColor(0x28a745)
@@ -662,4 +697,4 @@ async function refreshForm() {
   await sendPersistentForm();
 }
 
-module.exports = { initializeBot, refreshForm, getClient };
+module.exports = { initializeBot, refreshForm };
