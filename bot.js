@@ -5,6 +5,75 @@ const FORM_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563829/1
 
 let client = null;
 
+async function resolveTextChannel(guild, channelId, label) {
+  if (!guild) {
+    console.error(`❌ لا يمكن استخدام الروم ${label} لأن البوت غير مرتبط بمجموعة Discord.`);
+    return null;
+  }
+
+  let channel = guild.channels.cache.get(channelId);
+  if (!channel) {
+    try {
+      channel = await guild.channels.fetch(channelId);
+    } catch (err) {
+      console.error(`❌ فشل جلب ${label} (${channelId}):`, err.message || err);
+      return null;
+    }
+  }
+
+  if (!channel || !channel.isTextBased()) {
+    console.error(`❌ ${label} (${channelId}) ليس روم نصي صالحًا.`);
+    return null;
+  }
+
+  return channel;
+}
+
+async function findPersistentFormMessage(channel) {
+  const messages = await channel.messages.fetch({ limit: 30 });
+  return messages.find(m =>
+    m.author.id === client.user.id &&
+    m.embeds.some(embed => embed.title === '📋 نموذج التقديم - وزارة الصحة')
+  ) || messages.find(m => m.author.id === client.user.id && m.components.length > 0);
+}
+
+function buildControlPanelPayload(settings) {
+  const CONTROL_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507566493863510036/6a06818e-cbbb-4e21-ae2d-b881781ea41b.png?ex=6a125e35&is=6a110cb5&hm=719cc88e347a8e6bf573afd3876804338a43a70296b75fe3d0449326aa17ba4f';
+  const embed = new EmbedBuilder()
+    .setColor(0xd4af37)
+    .setTitle('⚙️ لوحة التحكم - فتح وغلاق التقديم')
+    .setImage(CONTROL_IMAGE)
+    .setFooter({ text: 'وزارة الصحة' })
+    .setTimestamp();
+
+  const toggleBtn = new ButtonBuilder()
+    .setCustomId('toggle_submissions')
+    .setLabel(settings.submissions_open ? '🔒 إغلاق التقديم' : '✅ فتح التقديم')
+    .setStyle(settings.submissions_open ? ButtonStyle.Danger : ButtonStyle.Success);
+
+  return { embeds: [embed], components: [new ActionRowBuilder().addComponents(toggleBtn)] };
+}
+
+async function postControlPanelToChannel(channel, settings = null) {
+  if (!channel) return false;
+
+  const currentSettings = settings || await db.settings.get();
+  const payload = buildControlPanelPayload(currentSettings);
+  const messages = await channel.messages.fetch({ limit: 30 });
+  const old = messages.find(m =>
+    m.author.id === client.user.id &&
+    m.embeds.some(embed => embed.title === '⚙️ لوحة التحكم - فتح وغلاق التقديم')
+  );
+
+  if (old) {
+    await old.edit(payload).catch(() => {});
+    return true;
+  }
+
+  await channel.send(payload);
+  return true;
+}
+
 function initializeBot() {
   client = new Client({
     intents: [
@@ -71,6 +140,9 @@ async function registerCommands() {
     new SlashCommandBuilder()
       .setName('نشر')
       .setDescription('📋 نشر نموذج التقديم في الروم الحالي (للمسؤولين)'),
+    new SlashCommandBuilder()
+      .setName('لوحة_التحكم')
+      .setDescription('⚙️ نشر لوحة التحكم في الروم الحالي (للمسؤولين)'),
   ];
 
   const rest = new REST({ version: '10' }).setToken(process.env.BOT_TOKEN);
@@ -94,7 +166,7 @@ async function handleCommand(interaction) {
         { name: '📋 الزر في الروم', value: 'اضغط على زر **تقديم طلب** في روم النموذج', inline: false },
         { name: '/تقديم', value: '📋 عرض نموذج التقديم في الروم الحالي', inline: false },
         { name: '/حالتي', value: '🔍 عرض حالة طلب التقديم الخاص بك', inline: false },
-        { name: '/نشر', value: '📋 نشر نموذج التقديم في الروم (للمسؤولين)', inline: false },
+        { name: '/لوحة_التحكم', value: '⚙️ نشر لوحة التحكم في الروم الحالي (للمسؤولين)', inline: false },
         { name: '/مساعدة', value: '📚 عرض هذه القائمة', inline: false },
       )
       .setFooter({ text: 'وزارة الصحة' })
@@ -206,6 +278,17 @@ async function handleCommand(interaction) {
     });
 
     await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
+  } else if (interaction.commandName === 'لوحة_التحكم') {
+    const ADMIN_ROLE_ID = process.env.ADMIN_ROLE_ID;
+    if (ADMIN_ROLE_ID && ADMIN_ROLE_ID !== 'YOUR_ADMIN_ROLE_ID_HERE') {
+      if (!interaction.member.roles.cache.has(ADMIN_ROLE_ID)) {
+        return interaction.reply({ content: '❌ هذا الأمر مخصص للمسؤولين فقط.', flags: MessageFlags.Ephemeral });
+      }
+    }
+
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    await postControlPanelToChannel(interaction.channel);
+    await interaction.editReply({ content: '✅ تم نشر لوحة التحكم في هذا الروم!' });
   }
 }
 
@@ -347,18 +430,9 @@ async function sendApplicationToDiscord(application, guild) {
   const channelId = process.env.REQUESTS_CHANNEL_ID;
   console.log(`محاولة إرسال الطلب إلى الروم: ${channelId}`);
 
-  let channel = guild.channels.cache.get(channelId);
+  const channel = await resolveTextChannel(guild, channelId, 'قناة الطلبات');
   if (!channel) {
-    try {
-      channel = await guild.channels.fetch(channelId);
-      console.log(`تم جلب الروم بنجاح: ${channel.name}`);
-    } catch (err) {
-      console.error(`فشل جلب الروم ${channelId}:`, err);
-      return;
-    }
-  }
-  if (!channel) {
-    console.error(`الروم ${channelId} غير موجود`);
+    console.error(`❌ تعذّر الوصول إلى قناة الطلبات ${channelId}.`);
     return;
   }
 
@@ -401,19 +475,11 @@ async function sendPersistentForm() {
   if (!client || !client.isReady()) return;
   const channelId = process.env.FORM_CHANNEL_ID;
   if (!channelId || channelId === 'YOUR_FORM_CHANNEL_ID_HERE') return;
-  let channel = client.channels.cache.get(channelId);
-  if (!channel) {
-    try {
-      channel = await client.channels.fetch(channelId);
-    } catch (err) {
-      console.error('فشل جلب رو النموذج:', err);
-      return;
-    }
-  }
+
+  const channel = await resolveTextChannel(client.guilds.cache.get(process.env.GUILD_ID), channelId, 'قناة النموذج');
   if (!channel) return;
 
-  const messages = await channel.messages.fetch({ limit: 20 });
-  const old = messages.find(m => m.author.id === client.user.id && m.components.length > 0);
+  const old = await findPersistentFormMessage(channel);
 
   const settings = await db.settings.get();
   const embed = new EmbedBuilder()
@@ -442,56 +508,32 @@ async function sendPersistentForm() {
         .setLabel('🔒 التقديم مغلق')
         .setStyle(ButtonStyle.Danger);
 
+  const payload = { embeds: [embed], components: [new ActionRowBuilder().addComponents(btn)] };
+
   if (old) {
-    await old.edit({
-      embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(btn)]
-    }).catch(() => {});
-  } else {
-    await channel.send({
-      embeds: [embed],
-      components: [new ActionRowBuilder().addComponents(btn)]
-    });
+    try {
+      await old.edit(payload);
+      return;
+    } catch (err) {
+      console.error('❌ فشل تحديث رسالة النموذج، سأعيد نشرها:', err.message || err);
+      try {
+        await old.delete().catch(() => {});
+      } catch {}
+    }
   }
+
+  await channel.send(payload);
 }
 
 async function sendControlPanel() {
   if (!client || !client.isReady()) return;
   const channelId = process.env.CONTROL_CHANNEL_ID;
   if (!channelId || channelId === 'YOUR_CONTROL_CHANNEL_ID_HERE') return;
-  let channel = client.channels.cache.get(channelId);
-  if (!channel) {
-    try {
-      channel = await client.channels.fetch(channelId);
-    } catch (err) {
-      console.error('فشل جلب رو التحكم:', err);
-      return;
-    }
-  }
+
+  const channel = await resolveTextChannel(client.guilds.cache.get(process.env.GUILD_ID), channelId, 'قناة التحكم');
   if (!channel) return;
 
-  const messages = await channel.messages.fetch({ limit: 20 });
-  const old = messages.find(m => m.author.id === client.user.id && m.components.length > 0);
-
-  const settings = await db.settings.get();
-  const CONTROL_IMAGE = 'https://cdn.discordapp.com/attachments/1420155092874563827/1507566493863510036/6a06818e-cbbb-4e21-ae2d-b881781ea41b.png?ex=6a125e35&is=6a110cb5&hm=719cc88e347a8e6bf573afd3876804338a43a70296b75fe3d0449326aa17ba4f';
-  const embed = new EmbedBuilder()
-    .setColor(0xd4af37)
-    .setTitle('⚙️ لوحة التحكم - فتح وغلاق التقديم')
-    .setImage(CONTROL_IMAGE)
-    .setFooter({ text: 'وزارة الصحة' })
-    .setTimestamp();
-
-  const toggleBtn = new ButtonBuilder()
-    .setCustomId('toggle_submissions')
-    .setLabel(settings.submissions_open ? '🔒 إغلاق التقديم' : '✅ فتح التقديم')
-    .setStyle(settings.submissions_open ? ButtonStyle.Danger : ButtonStyle.Success);
-
-  if (old) {
-    await old.edit({ embeds: [embed], components: [new ActionRowBuilder().addComponents(toggleBtn)] }).catch(() => {});
-  } else {
-    await channel.send({ embeds: [embed], components: [new ActionRowBuilder().addComponents(toggleBtn)] });
-  }
+  await postControlPanelToChannel(channel);
 }
 
 async function handleButtonInteraction(interaction) {
