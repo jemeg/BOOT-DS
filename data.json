@@ -1,0 +1,170 @@
+{
+  "applications": [],
+  "logs": [
+    {
+      "id": "mphdq9qmvobq9n",
+      "application_id": "mphdq9qazp79vn",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب جديد بواسطة DFG",
+      "created_at": "2026-05-22T23:35:54.190Z"
+    },
+    {
+      "id": "mphdqsgdty1j5t",
+      "application_id": "mphdq9qazp79vn",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب DFG بواسطة ghazwan.mg بسبب: ASD",
+      "created_at": "2026-05-22T23:36:18.445Z"
+    },
+    {
+      "id": "mphfdo7bo68jft",
+      "application_id": "mphfdo6zr52mk8",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب إسعاف جديد بواسطة محمد",
+      "created_at": "2026-05-23T00:22:05.639Z"
+    },
+    {
+      "id": "mphfe2u359xjag",
+      "application_id": "mphfdo6zr52mk8",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب محمد بواسطة ghazwan.mg بسبب: غير مئهل",
+      "created_at": "2026-05-23T00:22:24.603Z"
+    },
+    {
+      "id": "mphfhmyepemaxz",
+      "application_id": "mphfhmy1p7xoih",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب إسعاف جديد بواسطة محمد",
+      "created_at": "2026-05-23T00:25:10.646Z"
+    },
+    {
+      "id": "mphfhxs5j8e8t0",
+      "application_id": "mphfhmy1p7xoih",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب محمد بواسطة ghazwan.mg بسبب: غير مؤهل",
+      "created_at": "2026-05-23T00:25:24.677Z"
+    },
+    {
+      "id": "mphfk1u6slssnp",
+      "application_id": "mphfk1tu7jhjx5",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب إسعاف جديد بواسطة ااا",
+      "created_at": "2026-05-23T00:27:03.246Z"
+    },
+    {
+      "id": "mphfk8ecr92jia",
+      "application_id": "mphfk1tu7jhjx5",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب ااا بواسطة ghazwan.mg بسبب: شسي",
+      "created_at": "2026-05-23T00:27:11.748Z"
+    },
+    {
+      "id": "mphp9xr7bg6mtm",
+      "application_id": "mphp9xqdoyud2m",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب إسعاف جديد بواسطة شسي",
+      "created_at": "2026-05-23T04:59:07.555Z"
+    },
+    {
+      "id": "mphpa1uy9dt33y",
+      "application_id": "mphp9xqdoyud2m",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب شسي بواسطة ghazwan.mg بسبب: بلا",
+      "created_at": "2026-05-23T04:59:12.874Z"
+    },
+    {
+      "id": "mphs3au0yrs0v2",
+      "application_id": "mphs3at304uuhf",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب جديد بواسطة يسب",
+      "created_at": "2026-05-23T06:17:56.760Z"
+    },
+    {
+      "id": "mphs3hj56o5k7k",
+      "application_id": "mphs3at304uuhf",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب يسب بواسطة ghazwan.mg بسبب: سشي",
+      "created_at": "2026-05-23T06:18:05.441Z"
+    },
+    {
+      "id": "mphs3votnd5vzi",
+      "application_id": "mphs3vhumwq9mk",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب جديد بواسطة شسي",
+      "created_at": "2026-05-23T06:18:23.789Z"
+    },
+    {
+      "id": "mphs43fo8vnjak",
+      "application_id": "mphs3vhumwq9mk",
+      "action": "approve",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم قبول طلب شسي بواسطة ghazwan.mg",
+      "created_at": "2026-05-23T06:18:33.828Z"
+    },
+    {
+      "id": "mpht4uvf9w6j7h",
+      "application_id": "mpht4uv2dux1bn",
+      "action": "submit",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تقديم طلب جديد بواسطة يسش",
+      "created_at": "2026-05-23T06:47:09.003Z"
+    },
+    {
+      "id": "mpht52kf5ynxe5",
+      "application_id": "mpht4uv2dux1bn",
+      "action": "reject",
+      "performed_by": "ghazwan.mg",
+      "performed_by_id": "767470330025214052",
+      "details": "تم رفض طلب يسش بواسطة ghazwan.mg بسبب: بيءل",
+      "created_at": "2026-05-23T06:47:18.975Z"
+    },
+    {
+      "id": "mpht6ci8913mh0",
+      "application_id": "mpht6chv8di2ky",
+      "action": "submit",
+      "performed_by": "tahaals",
+      "performed_by_id": "1006272270764884038",
+      "details": "تقديم طلب جديد بواسطة hfh",
+      "created_at": "2026-05-23T06:48:18.512Z"
+    },
+    {
+      "id": "mpht6lu3witsr6",
+      "application_id": "mpht6chv8di2ky",
+      "action": "approve",
+      "performed_by": "tahaals",
+      "performed_by_id": "1006272270764884038",
+      "details": "تم قبول طلب hfh بواسطة tahaals",
+      "created_at": "2026-05-23T06:48:30.603Z"
+    }
+  ],
+  "settings": {
+    "submissions_open": false
+  }
+}
