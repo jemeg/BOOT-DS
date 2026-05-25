@@ -89,6 +89,11 @@ async function postControlPanelToChannel(channel, settings = null) {
   return true;
 }
 
+function shouldIgnoreInteractionError(err) {
+  const message = err?.message || '';
+  return message.includes('Unknown interaction') || message.includes('Interaction has already been acknowledged.');
+}
+
 function initializeBot() {
   client = new Client({
     intents: [
@@ -124,6 +129,10 @@ function initializeBot() {
     } catch (err) {
       const type = interaction.isChatInputCommand() ? 'command' : interaction.isButton() ? 'button' : interaction.isModalSubmit() ? 'modal' : 'other';
       const id = interaction.customId || interaction.commandName || '?';
+      if (shouldIgnoreInteractionError(err)) {
+        console.warn(`⚠️ تجاهل تفاعل منتهي/مكرر [${type}] [${id}]`);
+        return;
+      }
       console.error(`❌ خطأ [${type}] [${id}]:`, err.message || err);
       const msg = { content: '❌ حدث خطأ أثناء معالجة الطلب', flags: MessageFlags.Ephemeral };
       if (interaction.deferred || interaction.replied) {
@@ -288,7 +297,11 @@ async function handleModalSubmit(interaction) {
 
     await interaction.editReply({ content: '✅ تم إرسال طلبك بنجاح! سيتم مراجعته من قبل المسؤولين.' });
 
-    await sendApplicationToDiscord(app, interaction.guild);
+    try {
+      await sendApplicationToDiscord(app, interaction.guild);
+    } catch (err) {
+      console.error(`❌ فشل إرسال طلب ${app.id} إلى الروم:`, err);
+    }
 
   } else if (interaction.customId.startsWith('reject_reason_')) {
     const appId = interaction.customId.replace('reject_reason_', '');
@@ -393,50 +406,59 @@ async function handleModalSubmit(interaction) {
 async function sendApplicationToDiscord(application, guild) {
   if (!client || !client.isReady()) {
     console.error('البوت غير جاهز لإرسال الطلب');
-    return;
+    return false;
+  }
+
+  const resolvedGuild = guild || client.guilds.cache.get(process.env.GUILD_ID) || await client.guilds.fetch(process.env.GUILD_ID).catch(() => null);
+  if (!resolvedGuild) {
+    console.error('❌ لم أتمكن من الحصول على بيانات السيرفر لإرسال الطلب.');
+    return false;
   }
 
   const channelId = process.env.REQUESTS_CHANNEL_ID;
   console.log(`محاولة إرسال الطلب إلى الروم: ${channelId}`);
 
-  const channel = await resolveTextChannel(guild, channelId, 'قناة الطلبات');
+  const channel = await resolveTextChannel(resolvedGuild, channelId, 'قناة الطلبات');
   if (!channel) {
     console.error(`❌ تعذّر الوصول إلى قناة الطلبات ${channelId}.`);
-    return;
+    return false;
   }
 
-  const user = await client.users.fetch(application.discord_user_id).catch(() => null);
-
-  const embed = new EmbedBuilder()
-    .setColor(0x3498db)
-    .setTitle('📋 طلب تقديم جديد')
-    .setThumbnail(user?.displayAvatarURL() || 'https://cdn-icons-png.flaticon.com/512/3308/3308395.png')
-    .addFields(
-      { name: '👤 الاسم', value: application.full_name, inline: true },
-      { name: '🎂 العمر', value: String(application.age), inline: true },
-      { name: '📝 سبب التقديم', value: application.reason || 'غير محدد', inline: false },
-      { name: '👤 مقدم الطلب', value: user ? `<@${application.discord_user_id}>` : application.discord_username, inline: true }
-    )
-    .setFooter({ text: `معرف الطلب: ${application.id}` })
-    .setTimestamp();
-
-  const approveBtn = new ButtonBuilder()
-    .setCustomId(`approve_${application.id}`)
-    .setLabel('✅ قبول')
-    .setStyle(ButtonStyle.Success);
-
-  const rejectBtn = new ButtonBuilder()
-    .setCustomId(`reject_${application.id}`)
-    .setLabel('❌ رفض')
-    .setStyle(ButtonStyle.Danger);
-
-  const row = new ActionRowBuilder().addComponents(approveBtn, rejectBtn);
-
   try {
+    const user = await client.users.fetch(application.discord_user_id).catch(() => null);
+    const safeReason = (application.reason || 'غير محدد').slice(0, 1024);
+
+    const embed = new EmbedBuilder()
+      .setColor(0x3498db)
+      .setTitle('📋 طلب تقديم جديد')
+      .setThumbnail(user?.displayAvatarURL() || 'https://cdn-icons-png.flaticon.com/512/3308/3308395.png')
+      .addFields(
+        { name: '👤 الاسم', value: application.full_name, inline: true },
+        { name: '🎂 العمر', value: String(application.age), inline: true },
+        { name: '📝 سبب التقديم', value: safeReason, inline: false },
+        { name: '👤 مقدم الطلب', value: user ? `<@${application.discord_user_id}>` : application.discord_username, inline: true }
+      )
+      .setFooter({ text: `معرف الطلب: ${application.id}` })
+      .setTimestamp();
+
+    const approveBtn = new ButtonBuilder()
+      .setCustomId(`approve_${application.id}`)
+      .setLabel('✅ قبول')
+      .setStyle(ButtonStyle.Success);
+
+    const rejectBtn = new ButtonBuilder()
+      .setCustomId(`reject_${application.id}`)
+      .setLabel('❌ رفض')
+      .setStyle(ButtonStyle.Danger);
+
+    const row = new ActionRowBuilder().addComponents(approveBtn, rejectBtn);
+
     await channel.send({ embeds: [embed], components: [row] });
     console.log(`تم إرسال الطلب ${application.id} بنجاح إلى الروم`);
+    return true;
   } catch (err) {
-    console.error(`فشل إرسال الطلب ${application.id} إلى الروم:`, err);
+    console.error(`❌ فشل إرسال الطلب ${application.id} إلى الروم:`, err);
+    return false;
   }
 }
 
