@@ -9,7 +9,6 @@ const LOCAL_IMAGES = {
   closed: path.join(__dirname, 'emg1.png'),
   approved: path.join(__dirname, 'emg4.png'),
   rejected: path.join(__dirname, 'emg5.png'),
-  noPermission: path.join(__dirname, 'emg6.png'),
 };
 
 const FORM_IMAGE = 'attachment://emg3.png';
@@ -109,88 +108,21 @@ async function postControlPanelToChannel(channel, settings = null) {
   return true;
 }
 
-async function replyNoPermission(interaction) {
-  const embed = new EmbedBuilder()
-    .setColor(0xdc3545)
-    .setImage('attachment://emg6.png')
-    .setFooter({ text: 'وزارة الصحة' })
-    .setTimestamp();
-
-  return interaction.reply({
-    embeds: [embed],
-    files: [{ attachment: LOCAL_IMAGES.noPermission, name: 'emg6.png' }],
-    flags: MessageFlags.Ephemeral,
-  });
-}
-
-async function resolveGuildMember(interaction) {
-  if (!interaction.inGuild()) {
-    return null;
-  }
-
-  const currentMember = interaction.member;
-
-  try {
-    const guild = await getGuildById(interaction.guildId);
-    if (!guild) {
-      return currentMember || null;
-    }
-
-    return await guild.members.fetch(interaction.user.id);
-  } catch {
-    return currentMember || null;
-  }
-}
-
-async function isAdministrator(member) {
-  return member?.permissions?.has?.(PermissionFlagsBits.Administrator) || false;
-}
-
 async function canManageSettings(interaction) {
   if (!interaction.inGuild()) {
     return false;
   }
 
-  const member = await resolveGuildMember(interaction);
-  if (!member) {
-    if (process.env.TEST_MODE === 'true') {
-      console.log(`[TEST_MODE] رفض صلاحية إدارة: لا يمكن جلب العضو (${interaction.user?.id || 'unknown'})`);
-    }
-    return false;
-  }
-
-  const settings = await db.settings.get(interaction.guildId);
-  const hasAdminRole = !!settings.admin_role_id && member.roles?.cache?.has(settings.admin_role_id);
-
-  if (process.env.TEST_MODE === 'true') {
-    console.log(`[TEST_MODE] صلاحيات إدارة: user=${interaction.user?.id} username=${interaction.user?.username} role=${settings.admin_role_id || 'none'} hasRole=${hasAdminRole}`);
-  }
-
-  if (!settings.admin_role_id) {
-    if (process.env.TEST_MODE === 'true') {
-      console.log(`[TEST_MODE] رفض صلاحية إدارة: لا توجد رتبة مسؤول مُحددة`);
-    }
-    return false;
-  }
-
-  return hasAdminRole;
-}
-
-async function canUseSettingsCommand(interaction) {
-  if (!interaction.inGuild()) {
-    return false;
-  }
-
-  const member = await resolveGuildMember(interaction);
-  if (!member) {
-    return false;
-  }
-
-  if (await isAdministrator(member)) {
+  if (interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
     return true;
   }
 
-  return canManageSettings(interaction);
+  const settings = await db.settings.get(interaction.guildId);
+  if (!settings.admin_role_id) {
+    return false;
+  }
+
+  return interaction.member.roles.cache.has(settings.admin_role_id);
 }
 
 function shouldIgnoreInteractionError(err) {
@@ -211,10 +143,6 @@ function initializeBot() {
   const token = process.env.BOT_TOKEN;
   if (!token) {
     throw new Error('⚠️ لم يتم تعيين توكن البوت في المتغيرات.');
-  }
-
-  if (process.env.TEST_MODE === 'true') {
-    console.log('[TEST_MODE] تم تفعيل وضع الاختبار لتسجيل تقييم صلاحيات المسؤول');
   }
 
   client.once('clientReady', async () => {
@@ -364,7 +292,7 @@ async function handleCommand(interaction) {
         (settings.submissions_open
           ? 'اضغط على الزر أدناه لتقديم طلب جديد.'
           : 'التقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲') +
-        '\n\n***━━━ ⚠️ الشــــروط ⚠️ ━━━***\n' +
+        '\n\n**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
         '**• يجب أن يكون عمرك فوق 15 سنة ✅**\n' +
         '**• يمكنك تقديم طلب واحد فقط كل مرة 📄**\n' +
         '**• بعد المراجعة سيتم إعلامك بنتيجة طلبك 📬**'
@@ -391,7 +319,7 @@ async function handleCommand(interaction) {
 
     await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
   } else if (interaction.commandName === 'لوحة_التحكم') {
-    if (!(await canUseSettingsCommand(interaction))) {
+    if (!(await canManageSettings(interaction))) {
       return interaction.reply({ content: '❌ هذا الأمر مخصص للمسؤولين فقط.', flags: MessageFlags.Ephemeral });
     }
 
@@ -399,15 +327,12 @@ async function handleCommand(interaction) {
     await postControlPanelToChannel(interaction.channel);
     await interaction.editReply({ content: '✅ تم نشر لوحة التحكم في هذا الروم!' });
   } else if (interaction.commandName === 'إعدادات') {
-    if (!(await canUseSettingsCommand(interaction))) {
+    if (!(await canManageSettings(interaction))) {
       return interaction.reply({ content: '❌ هذا الأمر مخصص للمسؤولين فقط.', flags: MessageFlags.Ephemeral });
     }
 
     const guildId = interaction.guildId;
     const settings = await db.settings.get(guildId);
-    const member = await resolveGuildMember(interaction);
-    const isAdmin = await isAdministrator(member);
-    const canChangeModelState = await canManageSettings(interaction);
     const hasUpdates = [
       'رتبة_المسؤول',
       'رتبة_المفعل',
@@ -440,36 +365,22 @@ async function handleCommand(interaction) {
     }
 
     const updates = [];
-    const ignored = [];
-
     const adminRole = interaction.options.getRole('رتبة_المسؤول');
     if (adminRole) {
-      if (canChangeModelState) {
-        await db.settings.update(guildId, 'admin_role_id', adminRole.id);
-        updates.push(`رتبة المسؤول: ${adminRole}`);
-      } else {
-        ignored.push('رتبة المسؤول');
-      }
+      await db.settings.update(guildId, 'admin_role_id', adminRole.id);
+      updates.push(`رتبة المسؤول: ${adminRole}`);
     }
 
     const activatedRole = interaction.options.getRole('رتبة_المفعل');
     if (activatedRole) {
-      if (canChangeModelState) {
-        await db.settings.update(guildId, 'activated_role_id', activatedRole.id);
-        updates.push(`رتبة المفعل: ${activatedRole}`);
-      } else {
-        ignored.push('رتبة المفعل');
-      }
+      await db.settings.update(guildId, 'activated_role_id', activatedRole.id);
+      updates.push(`رتبة المفعل: ${activatedRole}`);
     }
 
     const approvedRole = interaction.options.getRole('رتبة_المقبولة');
     if (approvedRole) {
-      if (canChangeModelState) {
-        await db.settings.update(guildId, 'approved_role_id', approvedRole.id);
-        updates.push(`رتبة المقبولة: ${approvedRole}`);
-      } else {
-        ignored.push('رتبة المقبولة');
-      }
+      await db.settings.update(guildId, 'approved_role_id', approvedRole.id);
+      updates.push(`رتبة المقبولة: ${approvedRole}`);
     }
 
     const requestsChannel = interaction.options.getChannel('روم_الطلبات');
@@ -498,24 +409,15 @@ async function handleCommand(interaction) {
 
     const submissionsOpen = interaction.options.getBoolean('فتح_التقديم');
     if (submissionsOpen !== null) {
-      if (canChangeModelState) {
-        await db.settings.update(guildId, 'submissions_open', submissionsOpen);
-        updates.push(`فتح التقديم: ${submissionsOpen ? 'مفتوح' : 'مغلق'}`);
-      } else {
-        ignored.push('فتح التقديم');
-      }
+      await db.settings.update(guildId, 'submissions_open', submissionsOpen);
+      updates.push(`فتح التقديم: ${submissionsOpen ? 'مفتوح' : 'مغلق'}`);
     }
 
     await sendPersistentForm(guildId);
     await sendControlPanel(guildId);
 
-    const summary = [`✅ تم تحديث الإعدادات بنجاح:\n${updates.map(item => `• ${item}`).join('\n')}`];
-    if (ignored.length) {
-      summary.push(`⚠️ تم تجاهل التغييرات التالية لأنك تمتلك صلاحية Administrator فقط: ${ignored.join(', ')}`);
-    }
-
     return interaction.reply({
-      content: summary.join('\n'),
+      content: `✅ تم تحديث الإعدادات بنجاح:\n${updates.map(item => `• ${item}`).join('\n')}`,
       flags: MessageFlags.Ephemeral,
     });
   }
@@ -906,7 +808,7 @@ async function handleButtonInteraction(interaction) {
 
   if (customId === 'toggle_submissions') {
     if (!(await canManageSettings(interaction))) {
-      return replyNoPermission(interaction);
+      return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -933,7 +835,7 @@ async function handleButtonInteraction(interaction) {
   }
 
   if (!(await canManageSettings(interaction))) {
-    return replyNoPermission(interaction);
+    return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
   }
 
   if (customId.startsWith('approve_')) {
