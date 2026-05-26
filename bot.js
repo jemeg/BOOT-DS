@@ -9,6 +9,7 @@ const LOCAL_IMAGES = {
   closed: path.join(__dirname, 'emg1.png'),
   approved: path.join(__dirname, 'emg4.png'),
   rejected: path.join(__dirname, 'emg5.png'),
+  noPermission: path.join(__dirname, 'emg6.png'),
 };
 
 const FORM_IMAGE = 'attachment://emg3.png';
@@ -108,21 +109,67 @@ async function postControlPanelToChannel(channel, settings = null) {
   return true;
 }
 
+async function replyNoPermission(interaction) {
+  const embed = new EmbedBuilder()
+    .setColor(0xdc3545)
+    .setImage('attachment://emg6.png')
+    .setFooter({ text: 'وزارة الصحة' })
+    .setTimestamp();
+
+  return interaction.reply({
+    embeds: [embed],
+    files: [{ attachment: LOCAL_IMAGES.noPermission, name: 'emg6.png' }],
+    flags: MessageFlags.Ephemeral,
+  });
+}
+
+async function resolveGuildMember(interaction) {
+  if (!interaction.inGuild()) {
+    return null;
+  }
+
+  const currentMember = interaction.member;
+
+  try {
+    const guild = await getGuildById(interaction.guildId);
+    if (!guild) {
+      return currentMember || null;
+    }
+
+    return await guild.members.fetch(interaction.user.id);
+  } catch {
+    return currentMember || null;
+  }
+}
+
 async function canManageSettings(interaction) {
   if (!interaction.inGuild()) {
     return false;
   }
 
-  if (interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
-    return true;
-  }
-
-  const settings = await db.settings.get(interaction.guildId);
-  if (!settings.admin_role_id) {
+  const member = await resolveGuildMember(interaction);
+  if (!member) {
+    if (process.env.TEST_MODE === 'true') {
+      console.log(`[TEST_MODE] رفض صلاحية إدارة: لا يمكن جلب العضو (${interaction.user?.id || 'unknown'})`);
+    }
     return false;
   }
 
-  return interaction.member.roles.cache.has(settings.admin_role_id);
+  const settings = await db.settings.get(interaction.guildId);
+  const hasAdminRole = !!settings.admin_role_id && member.roles?.cache?.has(settings.admin_role_id);
+
+  if (process.env.TEST_MODE === 'true') {
+    console.log(`[TEST_MODE] صلاحيات إدارة: user=${interaction.user?.id} username=${interaction.user?.username} role=${settings.admin_role_id || 'none'} hasRole=${hasAdminRole}`);
+  }
+
+  if (!settings.admin_role_id) {
+    if (process.env.TEST_MODE === 'true') {
+      console.log(`[TEST_MODE] رفض صلاحية إدارة: لا توجد رتبة مسؤول مُحددة`);
+    }
+    return false;
+  }
+
+  return hasAdminRole;
 }
 
 function shouldIgnoreInteractionError(err) {
@@ -143,6 +190,10 @@ function initializeBot() {
   const token = process.env.BOT_TOKEN;
   if (!token) {
     throw new Error('⚠️ لم يتم تعيين توكن البوت في المتغيرات.');
+  }
+
+  if (process.env.TEST_MODE === 'true') {
+    console.log('[TEST_MODE] تم تفعيل وضع الاختبار لتسجيل تقييم صلاحيات المسؤول');
   }
 
   client.once('clientReady', async () => {
@@ -292,7 +343,7 @@ async function handleCommand(interaction) {
         (settings.submissions_open
           ? 'اضغط على الزر أدناه لتقديم طلب جديد.'
           : 'التقديم حاليًا **مغلق** ✋\nيرجى الانتظار حتى يفتح التقديم المقبل قريبًا إن شاء الله 🤲') +
-        '\n\n**━━━ ⚠️ الشــــروط ⚠️ ━━━**\n' +
+        '\n\n***━━━ ⚠️ الشــــروط ⚠️ ━━━***\n' +
         '**• يجب أن يكون عمرك فوق 15 سنة ✅**\n' +
         '**• يمكنك تقديم طلب واحد فقط كل مرة 📄**\n' +
         '**• بعد المراجعة سيتم إعلامك بنتيجة طلبك 📬**'
@@ -808,7 +859,7 @@ async function handleButtonInteraction(interaction) {
 
   if (customId === 'toggle_submissions') {
     if (!(await canManageSettings(interaction))) {
-      return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
+      return replyNoPermission(interaction);
     }
 
     await interaction.deferReply({ flags: MessageFlags.Ephemeral });
@@ -835,7 +886,7 @@ async function handleButtonInteraction(interaction) {
   }
 
   if (!(await canManageSettings(interaction))) {
-    return interaction.reply({ content: '❌ ليس لديك صلاحية للقيام بهذا الإجراء.', flags: MessageFlags.Ephemeral });
+    return replyNoPermission(interaction);
   }
 
   if (customId.startsWith('approve_')) {
