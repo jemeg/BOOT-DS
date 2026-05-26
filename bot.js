@@ -142,6 +142,10 @@ async function resolveGuildMember(interaction) {
   }
 }
 
+async function isAdministrator(member) {
+  return member?.permissions?.has?.(PermissionFlagsBits.Administrator) || false;
+}
+
 async function canManageSettings(interaction) {
   if (!interaction.inGuild()) {
     return false;
@@ -170,6 +174,23 @@ async function canManageSettings(interaction) {
   }
 
   return hasAdminRole;
+}
+
+async function canUseSettingsCommand(interaction) {
+  if (!interaction.inGuild()) {
+    return false;
+  }
+
+  const member = await resolveGuildMember(interaction);
+  if (!member) {
+    return false;
+  }
+
+  if (await isAdministrator(member)) {
+    return true;
+  }
+
+  return canManageSettings(interaction);
 }
 
 function shouldIgnoreInteractionError(err) {
@@ -370,7 +391,7 @@ async function handleCommand(interaction) {
 
     await interaction.editReply({ content: '✅ تم نشر النموذج في هذا الروم!' });
   } else if (interaction.commandName === 'لوحة_التحكم') {
-    if (!(await canManageSettings(interaction))) {
+    if (!(await canUseSettingsCommand(interaction))) {
       return interaction.reply({ content: '❌ هذا الأمر مخصص للمسؤولين فقط.', flags: MessageFlags.Ephemeral });
     }
 
@@ -378,12 +399,15 @@ async function handleCommand(interaction) {
     await postControlPanelToChannel(interaction.channel);
     await interaction.editReply({ content: '✅ تم نشر لوحة التحكم في هذا الروم!' });
   } else if (interaction.commandName === 'إعدادات') {
-    if (!(await canManageSettings(interaction))) {
+    if (!(await canUseSettingsCommand(interaction))) {
       return interaction.reply({ content: '❌ هذا الأمر مخصص للمسؤولين فقط.', flags: MessageFlags.Ephemeral });
     }
 
     const guildId = interaction.guildId;
     const settings = await db.settings.get(guildId);
+    const member = await resolveGuildMember(interaction);
+    const isAdmin = await isAdministrator(member);
+    const canChangeModelState = await canManageSettings(interaction);
     const hasUpdates = [
       'رتبة_المسؤول',
       'رتبة_المفعل',
@@ -416,22 +440,36 @@ async function handleCommand(interaction) {
     }
 
     const updates = [];
+    const ignored = [];
+
     const adminRole = interaction.options.getRole('رتبة_المسؤول');
     if (adminRole) {
-      await db.settings.update(guildId, 'admin_role_id', adminRole.id);
-      updates.push(`رتبة المسؤول: ${adminRole}`);
+      if (canChangeModelState) {
+        await db.settings.update(guildId, 'admin_role_id', adminRole.id);
+        updates.push(`رتبة المسؤول: ${adminRole}`);
+      } else {
+        ignored.push('رتبة المسؤول');
+      }
     }
 
     const activatedRole = interaction.options.getRole('رتبة_المفعل');
     if (activatedRole) {
-      await db.settings.update(guildId, 'activated_role_id', activatedRole.id);
-      updates.push(`رتبة المفعل: ${activatedRole}`);
+      if (canChangeModelState) {
+        await db.settings.update(guildId, 'activated_role_id', activatedRole.id);
+        updates.push(`رتبة المفعل: ${activatedRole}`);
+      } else {
+        ignored.push('رتبة المفعل');
+      }
     }
 
     const approvedRole = interaction.options.getRole('رتبة_المقبولة');
     if (approvedRole) {
-      await db.settings.update(guildId, 'approved_role_id', approvedRole.id);
-      updates.push(`رتبة المقبولة: ${approvedRole}`);
+      if (canChangeModelState) {
+        await db.settings.update(guildId, 'approved_role_id', approvedRole.id);
+        updates.push(`رتبة المقبولة: ${approvedRole}`);
+      } else {
+        ignored.push('رتبة المقبولة');
+      }
     }
 
     const requestsChannel = interaction.options.getChannel('روم_الطلبات');
@@ -460,15 +498,24 @@ async function handleCommand(interaction) {
 
     const submissionsOpen = interaction.options.getBoolean('فتح_التقديم');
     if (submissionsOpen !== null) {
-      await db.settings.update(guildId, 'submissions_open', submissionsOpen);
-      updates.push(`فتح التقديم: ${submissionsOpen ? 'مفتوح' : 'مغلق'}`);
+      if (canChangeModelState) {
+        await db.settings.update(guildId, 'submissions_open', submissionsOpen);
+        updates.push(`فتح التقديم: ${submissionsOpen ? 'مفتوح' : 'مغلق'}`);
+      } else {
+        ignored.push('فتح التقديم');
+      }
     }
 
     await sendPersistentForm(guildId);
     await sendControlPanel(guildId);
 
+    const summary = [`✅ تم تحديث الإعدادات بنجاح:\n${updates.map(item => `• ${item}`).join('\n')}`];
+    if (ignored.length) {
+      summary.push(`⚠️ تم تجاهل التغييرات التالية لأنك تمتلك صلاحية Administrator فقط: ${ignored.join(', ')}`);
+    }
+
     return interaction.reply({
-      content: `✅ تم تحديث الإعدادات بنجاح:\n${updates.map(item => `• ${item}`).join('\n')}`,
+      content: summary.join('\n'),
       flags: MessageFlags.Ephemeral,
     });
   }
