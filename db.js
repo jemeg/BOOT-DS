@@ -14,16 +14,49 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
 }
 
+function getDefaultGuildSettings() {
+  return {
+    submissions_open: true,
+    admin_role_id: null,
+    activated_role_id: null,
+    approved_role_id: null,
+    requests_channel_id: null,
+    form_channel_id: null,
+    logs_channel_id: null,
+    control_channel_id: null,
+  };
+}
+
+function normalizeGuildSettings(settings = {}) {
+  return { ...getDefaultGuildSettings(), ...settings };
+}
+
 function readData() {
   try {
     if (!fs.existsSync(DATA_FILE)) {
-      const initial = { applications: [], logs: [], settings: { submissions_open: true } };
+      const initial = {
+        applications: [],
+        logs: [],
+        settings: { submissions_open: true },
+        guild_settings: {},
+      };
       fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2));
       return initial;
     }
-    return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+
+    const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+    if (!data.guild_settings) data.guild_settings = {};
+    if (!data.settings) data.settings = { submissions_open: true };
+    if (!Array.isArray(data.applications)) data.applications = [];
+    if (!Array.isArray(data.logs)) data.logs = [];
+    return data;
   } catch {
-    return { applications: [], logs: [], settings: { submissions_open: true } };
+    return {
+      applications: [],
+      logs: [],
+      settings: { submissions_open: true },
+      guild_settings: {},
+    };
   }
 }
 
@@ -128,23 +161,47 @@ const _applications = {
 };
 
 const _settings = {
-  async get() {
+  async get(guildId = null) {
     if (mode === 'mongo') {
-      const doc = await _db.collection('settings').findOne({ _id: 'settings' });
-      return doc || { submissions_open: true };
+      const [legacyDoc, guildDoc] = await Promise.all([
+        _db.collection('settings').findOne({ _id: 'settings' }),
+        guildId ? _db.collection('settings').findOne({ guild_id: guildId }) : null,
+      ]);
+
+      const legacy = legacyDoc ? (({ _id, ...rest }) => rest)(legacyDoc) : {};
+      const guild = guildDoc ? (({ _id, guild_id, ...rest }) => rest)(guildDoc) : {};
+      return normalizeGuildSettings({ ...legacy, ...guild });
     }
-    return readData().settings || { submissions_open: true };
-  },
-  async update(key, value) {
-    if (mode === 'mongo') {
-      await _db.collection('settings').updateOne({ _id: 'settings' }, { $set: { [key]: value } });
-      return _settings.get();
-    }
+
     const data = readData();
-    if (!data.settings) data.settings = { submissions_open: true };
-    data.settings[key] = value;
+    const globalSettings = data.settings || {};
+    const guildSettings = guildId ? (data.guild_settings?.[guildId] || {}) : {};
+    return normalizeGuildSettings({ ...globalSettings, ...guildSettings });
+  },
+  async update(guildId = null, key, value) {
+    if (mode === 'mongo') {
+      if (guildId) {
+        await _db.collection('settings').updateOne(
+          { guild_id: guildId },
+          { $set: { guild_id: guildId, [key]: value } },
+          { upsert: true }
+        );
+      } else {
+        await _db.collection('settings').updateOne(
+          { _id: 'settings' },
+          { $set: { [key]: value } },
+          { upsert: true }
+        );
+      }
+      return _settings.get(guildId);
+    }
+
+    const data = readData();
+    if (!data.guild_settings) data.guild_settings = {};
+    if (!data.guild_settings[guildId]) data.guild_settings[guildId] = {};
+    data.guild_settings[guildId][key] = value;
     writeData(data);
-    return data.settings;
+    return _settings.get(guildId);
   }
 };
 
@@ -171,9 +228,6 @@ function readDataSync() {
 }
 
 const _fast = {
-  get settings() {
-    try { return readDataSync().settings || { submissions_open: true }; } catch { return { submissions_open: true }; }
-  },
   getUserApps(discordUserId) {
     try { return readDataSync().applications.filter(a => a.discord_user_id === discordUserId); } catch { return []; }
   }
