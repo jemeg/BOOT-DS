@@ -96,9 +96,15 @@ const _applications = {
     if (status) apps = apps.filter(a => a.status === status);
     return apps.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   },
-  async getByUser(discordUserId) {
-    if (mode === 'mongo') return _db.collection('applications').find({ discord_user_id: discordUserId }).toArray();
-    return readData().applications.filter(a => a.discord_user_id === discordUserId);
+  async getByUser(discordUserId, guildId) {
+    const filter = { discord_user_id: discordUserId };
+    if (guildId) filter.guild_id = guildId;
+    if (mode === 'mongo') return _db.collection('applications').find(filter).toArray();
+    return readData().applications.filter(a => {
+      if (a.discord_user_id !== discordUserId) return false;
+      if (guildId && a.guild_id !== guildId) return false;
+      return true;
+    });
   },
   async getById(id) {
     if (mode === 'mongo') return _db.collection('applications').findOne({ id });

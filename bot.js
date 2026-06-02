@@ -257,7 +257,7 @@ async function handleCommand(interaction) {
     return interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
   } else if (interaction.commandName === 'حالتي') {
-    const userApps = await db.applications.getByUser(interaction.user.id);
+    const userApps = await db.applications.getByUser(interaction.user.id, interaction.guildId);
     if (!userApps.length) {
       return interaction.reply({ content: '❌ ليس لديك أي طلبات تقديم.', flags: MessageFlags.Ephemeral });
     }
@@ -445,6 +445,7 @@ async function handleModalSubmit(interaction) {
       reason,
       discord_user_id: interaction.user.id,
       discord_username: interaction.user.username,
+      guild_id: interaction.guildId,
     });
 
     await db.logs.create({
@@ -754,7 +755,7 @@ async function handleButtonInteraction(interaction) {
       return interaction.reply({ content: '❌ لديك بالفعل رتبة **مقبول**، لا يمكنك التقديم مجدداً.', flags: MessageFlags.Ephemeral });
     }
 
-    const userApps = await db.applications.getByUser(interaction.user.id);
+    const userApps = await db.applications.getByUser(interaction.user.id, interaction.guildId);
     if (userApps.some(a => a.status === 'pending')) {
       return interaction.reply({ content: '❌ لديك طلب قيد المراجعة بالفعل.', flags: MessageFlags.Ephemeral });
     }
